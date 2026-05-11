@@ -3,7 +3,7 @@
 ## Reporting Vulnerabilities
 
 Do NOT open a public issue for security vulnerabilities.
-Email: security@devilchain.network
+Email: securitychain@devilpvt.in
 Or open a private GitHub Security Advisory.
 
 ## Wallet Security
