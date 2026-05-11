@@ -1,139 +1,151 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.24;
 
-/// @title DevilID — Decentralized Identity System on DevilChain
-/// @notice Create, manage and verify on-chain identities
+/**
+ * @title DevilID
+ * @notice Decentralized Identity system for DevilChain
+ * @dev ERC-735 inspired self-sovereign identity with DAO verification
+ */
 contract DevilID {
     struct Identity {
-        string  username;       // Unique username e.g. @devil
-        string  displayName;    // Display name
-        string  bio;            // Profile bio
-        string  avatarCid;      // IPFS CID for avatar
-        address wallet;         // Linked wallet address
-        uint256 createdAt;      // Creation timestamp
-        uint256 reputationScore; // Reputation score (DAO-adjustable)
-        bool    isVerified;     // DAO-verified identity
-        bool    isActive;       // Active status
+        address owner;
+        string username;         // Unique @handle
+        string displayName;
+        string avatarCID;        // IPFS/DevilStorage CID
+        string bio;
+        uint256 createdAt;
+        uint256 reputationScore;
+        bool daoVerified;        // DAO-verified identity
+        bool active;
     }
 
-    mapping(address => Identity)  private identities;    // wallet => Identity
-    mapping(string => address)    private usernameToAddr; // username => wallet
-    mapping(address => address[]) private following;      // follower => [following...]
-    mapping(address => uint256)   private followerCount;  // address => follower count
+    struct Credential {
+        bytes32 id;
+        address issuer;
+        address subject;
+        string credentialType;   // e.g. "email", "kyc", "developer"
+        string dataHash;         // hash of credential data
+        uint256 issuedAt;
+        uint256 expiresAt;
+        bool revoked;
+    }
 
+    mapping(address => Identity) public identities;
+    mapping(string => address) public usernameToAddress;
+    mapping(bytes32 => Credential) public credentials;
+    mapping(address => bytes32[]) public userCredentials;
+
+    address public daoContract;
     uint256 public totalIdentities;
-    address public dao;  // DAO contract for verification
 
-    event IdentityCreated(address indexed wallet, string username);
-    event IdentityUpdated(address indexed wallet, string username);
-    event IdentityVerified(address indexed wallet, bool status);
-    event Followed(address indexed follower, address indexed target);
-    event Unfollowed(address indexed follower, address indexed target);
-
-    modifier onlyIdentityOwner() {
-        require(identities[msg.sender].wallet == msg.sender, "DevilID: No identity found");
-        _;
-    }
+    event IdentityCreated(address indexed owner, string username);
+    event IdentityUpdated(address indexed owner);
+    event CredentialIssued(bytes32 indexed credId, address indexed subject);
+    event CredentialRevoked(bytes32 indexed credId);
+    event DAOVerified(address indexed owner);
 
     modifier onlyDAO() {
-        require(msg.sender == dao, "DevilID: Only DAO");
+        require(msg.sender == daoContract, "Only DAO");
         _;
     }
 
-    constructor(address _dao) {
-        dao = _dao;
+    modifier hasIdentity() {
+        require(identities[msg.sender].active, "No identity found");
+        _;
     }
 
-    /// @notice Create a new DevilID
+    constructor(address _daoContract) {
+        daoContract = _daoContract;
+    }
+
     function createIdentity(
         string calldata username,
         string calldata displayName,
         string calldata bio,
-        string calldata avatarCid
+        string calldata avatarCID
     ) external {
-        require(identities[msg.sender].wallet == address(0), "Identity already exists");
-        require(usernameToAddr[username] == address(0), "Username taken");
-        require(bytes(username).length >= 3 && bytes(username).length <= 32, "Username 3-32 chars");
+        require(!identities[msg.sender].active, "Identity exists");
+        require(bytes(username).length >= 3, "Username too short");
+        require(usernameToAddress[username] == address(0), "Username taken");
 
         identities[msg.sender] = Identity({
+            owner: msg.sender,
             username: username,
             displayName: displayName,
+            avatarCID: avatarCID,
             bio: bio,
-            avatarCid: avatarCid,
-            wallet: msg.sender,
             createdAt: block.timestamp,
-            reputationScore: 100,
-            isVerified: false,
-            isActive: true
+            reputationScore: 0,
+            daoVerified: false,
+            active: true
         });
 
-        usernameToAddr[username] = msg.sender;
+        usernameToAddress[username] = msg.sender;
         totalIdentities++;
+
         emit IdentityCreated(msg.sender, username);
     }
 
-    /// @notice Update identity profile
     function updateIdentity(
         string calldata displayName,
         string calldata bio,
-        string calldata avatarCid
-    ) external onlyIdentityOwner {
+        string calldata avatarCID
+    ) external hasIdentity {
         Identity storage id = identities[msg.sender];
         id.displayName = displayName;
         id.bio = bio;
-        id.avatarCid = avatarCid;
-        emit IdentityUpdated(msg.sender, id.username);
+        id.avatarCID = avatarCID;
+        emit IdentityUpdated(msg.sender);
     }
 
-    /// @notice Get identity by wallet address
-    function getIdentity(address wallet) external view returns (Identity memory) {
-        require(identities[wallet].isActive, "Identity not found or inactive");
-        return identities[wallet];
+    function issueCredential(
+        address subject,
+        string calldata credType,
+        string calldata dataHash,
+        uint256 expiresAt
+    ) external returns (bytes32 credId) {
+        credId = keccak256(abi.encodePacked(msg.sender, subject, credType, block.timestamp));
+        credentials[credId] = Credential({
+            id: credId,
+            issuer: msg.sender,
+            subject: subject,
+            credentialType: credType,
+            dataHash: dataHash,
+            issuedAt: block.timestamp,
+            expiresAt: expiresAt,
+            revoked: false
+        });
+        userCredentials[subject].push(credId);
+        emit CredentialIssued(credId, subject);
     }
 
-    /// @notice Look up address by username
+    function revokeCredential(bytes32 credId) external {
+        require(credentials[credId].issuer == msg.sender, "Not issuer");
+        credentials[credId].revoked = true;
+        emit CredentialRevoked(credId);
+    }
+
+    function daoVerify(address user) external onlyDAO {
+        require(identities[user].active, "No identity");
+        identities[user].daoVerified = true;
+        identities[user].reputationScore += 100;
+        emit DAOVerified(user);
+    }
+
     function resolveUsername(string calldata username) external view returns (address) {
-        address addr = usernameToAddr[username];
-        require(addr != address(0), "Username not found");
-        return addr;
+        return usernameToAddress[username];
     }
 
-    /// @notice DAO can verify identities
-    function setVerified(address wallet, bool status) external onlyDAO {
-        identities[wallet].isVerified = status;
-        emit IdentityVerified(wallet, status);
+    function getIdentity(address user) external view returns (Identity memory) {
+        return identities[user];
     }
 
-    /// @notice DAO can adjust reputation scores
-    function adjustReputation(address wallet, uint256 score) external onlyDAO {
-        identities[wallet].reputationScore = score;
+    function getUserCredentials(address user) external view returns (bytes32[] memory) {
+        return userCredentials[user];
     }
 
-    /// @notice Follow another DevilID
-    function follow(address target) external onlyIdentityOwner {
-        require(target != msg.sender, "Cannot follow yourself");
-        following[msg.sender].push(target);
-        followerCount[target]++;
-        emit Followed(msg.sender, target);
-    }
-
-    /// @notice Deactivate own identity
-    function deactivate() external onlyIdentityOwner {
-        identities[msg.sender].isActive = false;
-    }
-
-    /// @notice Get who an address follows
-    function getFollowing(address wallet) external view returns (address[] memory) {
-        return following[wallet];
-    }
-
-    /// @notice Get follower count
-    function getFollowerCount(address wallet) external view returns (uint256) {
-        return followerCount[wallet];
-    }
-
-    /// @notice Check if address has an active identity
-    function hasIdentity(address wallet) external view returns (bool) {
-        return identities[wallet].wallet != address(0) && identities[wallet].isActive;
+    function isCredentialValid(bytes32 credId) external view returns (bool) {
+        Credential memory c = credentials[credId];
+        return !c.revoked && (c.expiresAt == 0 || block.timestamp < c.expiresAt);
     }
 }

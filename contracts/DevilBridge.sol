@@ -1,106 +1,135 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.24;
 
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import "./DevilCoin.sol";
 
-/// @title DevilBridge — Cross-chain Bridge Contract
-/// @notice Lock DVC on source chain, mint wrapped tokens on destination
-contract DevilBridge is Ownable, ReentrancyGuard {
-    IERC20 public devilCoin;
+/**
+ * @title DevilBridge
+ * @notice Cross-chain bridge contract for DevilChain
+ * @dev Lock/Unlock pattern for native DVC bridging
+ *      Supports: Ethereum, BNB Chain, Polygon, Solana (via relayer)
+ */
+contract DevilBridge {
+    DevilCoin public dvc;
+    address public owner;
+    address public relayer;      // Trusted bridge relayer
 
-    enum BridgeStatus { Pending, Locked, Released, Cancelled }
+    uint256 public bridgeFee = 0.001 ether;  // Fee in DVC (18 decimals)
+    uint256 public minBridge = 1 ether;       // Min 1 DVC
+    uint256 public maxBridge = 1_000_000 ether; // Max 1M DVC
+
+    enum ChainID { DevilChain, Ethereum, BNBChain, Polygon, Solana }
 
     struct BridgeRequest {
-        address from;
-        string  toAddress;    // Destination chain address
+        bytes32 id;
+        address sender;
+        string destAddress;    // Address on destination chain
         uint256 amount;
-        string  destinationChain; // "ethereum", "bnb", "polygon", "solana"
+        ChainID destChain;
         uint256 timestamp;
-        BridgeStatus status;
-        bytes32 txHash;
+        bool completed;
     }
 
     mapping(bytes32 => BridgeRequest) public bridgeRequests;
-    mapping(bytes32 => bool) public processedRelays;  // prevent replay
+    mapping(bytes32 => bool) public processedInbound; // Prevent replay
 
-    uint256 public bridgeFee = 0.001 ether;
-    uint256 public minBridgeAmount = 1 ether;
-    uint256 public totalBridged;
-    address public relayer; // Trusted off-chain relayer
-
-    event BridgeInitiated(bytes32 indexed reqId, address indexed from, string toAddress, uint256 amount, string destChain);
-    event BridgeReleased(bytes32 indexed reqId, address indexed to, uint256 amount);
-    event BridgeCancelled(bytes32 indexed reqId, address indexed from, uint256 amount);
-    event RelayerUpdated(address indexed newRelayer);
+    event BridgeOut(
+        bytes32 indexed bridgeId,
+        address indexed sender,
+        string destAddress,
+        uint256 amount,
+        ChainID destChain
+    );
+    event BridgeIn(
+        bytes32 indexed bridgeId,
+        address indexed recipient,
+        uint256 amount,
+        ChainID srcChain
+    );
     event FeeUpdated(uint256 newFee);
 
-    modifier onlyRelayer() {
-        require(msg.sender == relayer, "DevilBridge: Only relayer");
-        _;
-    }
+    modifier onlyOwner() { require(msg.sender == owner, "Not owner"); _; }
+    modifier onlyRelayer() { require(msg.sender == relayer, "Not relayer"); _; }
 
-    constructor(address _devilCoin, address _relayer) Ownable(msg.sender) {
-        devilCoin = IERC20(_devilCoin);
+    constructor(address _dvc, address _relayer) {
+        dvc = DevilCoin(_dvc);
+        owner = msg.sender;
         relayer = _relayer;
     }
 
-    /// @notice Initiate bridge: lock DVC tokens
-    function initiateBridge(
-        string calldata toAddress,
+    /**
+     * @notice Lock DVC and emit bridge event to destination chain
+     * @param destAddress Recipient address on destination chain
+     * @param amount Amount of DVC to bridge (in wei units)
+     * @param destChain Target chain ID
+     */
+    function bridgeOut(
+        string calldata destAddress,
         uint256 amount,
-        string calldata destinationChain
-    ) external payable nonReentrant returns (bytes32 reqId) {
-        require(amount >= minBridgeAmount, "Amount below minimum");
-        require(msg.value >= bridgeFee, "Insufficient bridge fee");
-        require(bytes(toAddress).length > 0, "Invalid destination address");
+        ChainID destChain
+    ) external {
+        require(amount >= minBridge, "Below minimum");
+        require(amount <= maxBridge, "Exceeds maximum");
+        require(bytes(destAddress).length > 0, "Invalid dest address");
 
-        require(devilCoin.transferFrom(msg.sender, address(this), amount), "Transfer failed");
+        uint256 fee = bridgeFee;
+        uint256 total = amount + fee;
 
-        reqId = keccak256(abi.encodePacked(msg.sender, toAddress, amount, block.timestamp, block.number));
-        require(bridgeRequests[reqId].from == address(0), "Request ID collision");
+        dvc.transferFrom(msg.sender, address(this), total);
+        // Fee stays in bridge, amount is locked
 
-        bridgeRequests[reqId] = BridgeRequest({
-            from: msg.sender,
-            toAddress: toAddress,
+        bytes32 bridgeId = keccak256(
+            abi.encodePacked(msg.sender, destAddress, amount, block.timestamp, block.number)
+        );
+
+        bridgeRequests[bridgeId] = BridgeRequest({
+            id: bridgeId,
+            sender: msg.sender,
+            destAddress: destAddress,
             amount: amount,
-            destinationChain: destinationChain,
+            destChain: destChain,
             timestamp: block.timestamp,
-            status: BridgeStatus.Locked,
-            txHash: reqId
+            completed: false
         });
 
-        totalBridged += amount;
-        emit BridgeInitiated(reqId, msg.sender, toAddress, amount, destinationChain);
+        emit BridgeOut(bridgeId, msg.sender, destAddress, amount, destChain);
     }
 
-    /// @notice Relayer releases tokens after cross-chain confirmation
-    function releaseBridge(
-        bytes32 reqId,
+    /**
+     * @notice Relayer mints/unlocks DVC on DevilChain side after source chain confirmation
+     * @param bridgeId Unique bridge request ID from source chain
+     * @param recipient DevilChain recipient address
+     * @param amount Amount to unlock
+     * @param srcChain Source chain
+     */
+    function bridgeIn(
+        bytes32 bridgeId,
         address recipient,
-        uint256 amount
-    ) external onlyRelayer nonReentrant {
-        require(!processedRelays[reqId], "Already processed");
-        processedRelays[reqId] = true;
-        require(devilCoin.transfer(recipient, amount), "Release transfer failed");
-        emit BridgeReleased(reqId, recipient, amount);
+        uint256 amount,
+        ChainID srcChain
+    ) external onlyRelayer {
+        require(!processedInbound[bridgeId], "Already processed");
+        processedInbound[bridgeId] = true;
+
+        dvc.transfer(recipient, amount);
+        emit BridgeIn(bridgeId, recipient, amount, srcChain);
     }
 
-    /// @notice Cancel bridge and refund (within 24h)
-    function cancelBridge(bytes32 reqId) external nonReentrant {
-        BridgeRequest storage req = bridgeRequests[reqId];
-        require(req.from == msg.sender, "Not bridge owner");
-        require(req.status == BridgeStatus.Locked, "Cannot cancel");
-        require(block.timestamp <= req.timestamp + 24 hours, "Cancel window expired");
-        req.status = BridgeStatus.Cancelled;
-        require(devilCoin.transfer(msg.sender, req.amount), "Refund failed");
-        emit BridgeCancelled(reqId, msg.sender, req.amount);
+    function setFee(uint256 newFee) external onlyOwner {
+        bridgeFee = newFee;
+        emit FeeUpdated(newFee);
     }
 
-    function setRelayer(address _relayer) external onlyOwner { relayer = _relayer; emit RelayerUpdated(_relayer); }
-    function setBridgeFee(uint256 fee) external onlyOwner { bridgeFee = fee; emit FeeUpdated(fee); }
-    function setMinAmount(uint256 amount) external onlyOwner { minBridgeAmount = amount; }
-    function withdrawFees() external onlyOwner { payable(owner()).transfer(address(this).balance); }
-    function getBridgeRequest(bytes32 reqId) external view returns (BridgeRequest memory) { return bridgeRequests[reqId]; }
+    function setRelayer(address newRelayer) external onlyOwner {
+        relayer = newRelayer;
+    }
+
+    function withdrawFees() external onlyOwner {
+        uint256 bal = dvc.balanceOf(address(this));
+        dvc.transfer(owner, bal);
+    }
+
+    function getBridgeRequest(bytes32 bridgeId) external view returns (BridgeRequest memory) {
+        return bridgeRequests[bridgeId];
+    }
 }
