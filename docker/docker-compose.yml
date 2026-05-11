@@ -1,0 +1,63 @@
+version: '3.9'
+
+services:
+  devilchain-node:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.core
+    container_name: devilchain_node
+    ports:
+      - "8545:8545"
+      - "30303:30303"
+    environment:
+      - RUST_LOG=info
+    volumes:
+      - devilchain_data:/data
+    restart: unless-stopped
+
+  devilscan:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.explorer
+    container_name: devilscan
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://devilchain-node:8545
+    depends_on:
+      - devilchain-node
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: devilchain_redis
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: devilchain_postgres
+    environment:
+      POSTGRES_DB: devilchain
+      POSTGRES_USER: devil
+      POSTGRES_PASSWORD: devilchain2026
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  mongodb:
+    image: mongo:7
+    container_name: devilchain_mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    restart: unless-stopped
+
+volumes:
+  devilchain_data:
+  postgres_data:
+  mongo_data:

@@ -1,0 +1,29 @@
+name: DevilChain Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build-release:
+    name: Build Release Binaries
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Build
+        working-directory: core
+        run: cargo build --release
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: core/target/release/devilchain-node
+          name: DevilChain ${{ github.ref_name }}
+          body: |
+            ## DevilChain Network ${{ github.ref_name }}
+            Native Coin: DevilCoin (DVC/DVL)
+            Consensus: Devil Hybrid Protocol (DHP)
+            AI: DevilGuard AI Security
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
