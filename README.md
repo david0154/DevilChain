@@ -1,7 +1,7 @@
 # ![DevilChain](logo.jpg)
 
 <p align="center">
-  <img src="logo.jpg" alt="DevilChain Network Logo" width="300"/>
+  <img src="logo.png" alt="DevilChain Network Logo" width="300"/>
 </p>
 
 <h1 align="center">DevilChain Network</h1>
