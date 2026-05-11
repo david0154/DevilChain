@@ -1,4 +1,13 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-body { background: #0D0D0D; color: white; }
+
+:root { --foreground-rgb: 255,255,255; --background-start-rgb: 13,13,13; }
+body { color: rgb(var(--foreground-rgb)); background: #0D0D0D; }
+* { box-sizing: border-box; }
+
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: #111; }
+::-webkit-scrollbar-thumb { background: #CC0000; border-radius: 3px; }
+
+.font-mono { font-family: 'Courier New', monospace; }
