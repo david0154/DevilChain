@@ -1,134 +1,179 @@
 #!/usr/bin/env bash
-# DevilChain Network - One Command Start
-# Usage: bash docker/start.sh [all|node|test|stop|logs|status]
-set -euo pipefail
+# DevilChain Network - Master Start Script
+# Optimized for low-resource VPS (2 CPU / 2GB RAM)
+# Developed by Nexuzy Lab | Powered by Devil One
+set -e
 
-COLOR_RED='\033[0;31m'
-COLOR_GREEN='\033[0;32m'
-COLOR_CYAN='\033[0;36m'
-COLOR_YELLOW='\033[1;33m'
-COLOR_RESET='\033[0m'
+RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'
+CYAN='\033[0;36m'; RESET='\033[0m'; BOLD='\033[1m'
 
-COMPOSE="docker compose -f docker/docker-compose.yml"
-CMD=${1:-all}
+CD="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT="$(dirname "$CD")"
+COMPOSE="docker compose -f $CD/docker-compose.yml"
 
-print_banner() {
-  echo -e "${COLOR_RED}"
-  echo '  ____            _ _  ____ _           _       '
-  echo ' |  _ \  _____   _(_) |/ ___| |__   __ _(_)_ __  '
-  echo " | | | |/ _ \\ \\ / / | | |   | '_ \\ / _\` | | '_ \\ "
-  echo ' | |_| |  __/\ V /| | | |___| | | | (_| | | | | |'
-  echo ' |____/ \___| \_/ |_|_|\____|_| |_|\__,_|_|_| |_|'
-  echo -e "${COLOR_RESET}"
-  echo -e "${COLOR_CYAN}  DevilChain Network - Docker Testing Stack${COLOR_RESET}"
-  echo ""
+banner() {
+  echo -e "${RED}${BOLD}"
+  echo "  ██████╗ ███████╗██╗   ██╗██╗██╗      ██████╗██╗  ██╗ █████╗ ██╗███╗   ██╗"
+  echo "  ██╔══██╗██╔════╝██║   ██║██║██║     ██╔════╝██║  ██║██╔══██╗██║████╗  ██║"
+  echo "  ██║  ██║█████╗  ██║   ██║██║██║     ██║     ███████║███████║██║██╔██╗ ██║"
+  echo "  ██║  ██║██╔══╝  ╚██╗ ██╔╝██║██║     ██║     ██╔══██║██╔══██║██║██║╚██╗██║"
+  echo "  ██████╔╝███████╗ ╚████╔╝ ██║███████╗╚██████╗██║  ██║██║  ██║██║██║ ╚████║"
+  echo "  ╚═════╝ ╚══════╝  ╚═══╝  ╚═╝╚══════╝ ╚═════╝╚═╝  ╚═╝╚═╝  ╚═╝╚═╝╚═╝  ╚═══╝"
+  echo -e "${RESET}  ${CYAN}DevilChain Network — Testnet 2026${RESET}"
+  echo -e "  ${YELLOW}Nexuzy Lab${RESET} (nexuzy.tech) | ${YELLOW}Devil One${RESET} (devilone.in)\n"
+}
+
+check_deps() {
+  for cmd in docker curl; do
+    if ! command -v $cmd &>/dev/null; then
+      echo -e "${RED}✗ Missing: $cmd${RESET}" && exit 1
+    fi
+  done
+  if ! docker compose version &>/dev/null; then
+    echo -e "${RED}✗ Docker Compose v2 required${RESET}" && exit 1
+  fi
+}
+
+check_resources() {
+  echo -e "${CYAN}── System Resources ─────────────────────${RESET}"
+  local ram_kb=$(grep MemTotal /proc/meminfo 2>/dev/null | awk '{print $2}' || echo 2097152)
+  local ram_mb=$((ram_kb / 1024))
+  local cpus=$(nproc 2>/dev/null || echo 2)
+  local disk=$(df -BG / 2>/dev/null | awk 'NR==2{print $4}' | tr -d 'G' || echo 10)
+
+  echo -e "  RAM : ${ram_mb}MB  CPUs: ${cpus}  Disk: ${disk}GB free"
+
+  if [ "$ram_mb" -lt 800 ]; then
+    echo -e "  ${YELLOW}⚠  Low RAM detected (<800MB). Starting minimal mode (node + AI only).${RESET}"
+    export DEVIL_MODE=minimal
+  elif [ "$ram_mb" -lt 1500 ]; then
+    echo -e "  ${YELLOW}⚠  Limited RAM (<1.5GB). Skipping miner. Use 'mining' profile manually.${RESET}"
+    export DEVIL_MODE=lite
+  else
+    echo -e "  ${GREEN}✓  Resources OK${RESET}"
+    export DEVIL_MODE=full
+  fi
+  echo
 }
 
 wait_healthy() {
-  local name=$1
-  local url=$2
-  echo -n "  Waiting for $name"
-  for i in $(seq 1 30); do
-    if curl -fsS "$url" >/dev/null 2>&1; then
-      echo -e " ${COLOR_GREEN}READY${COLOR_RESET}"
-      return 0
-    fi
-    echo -n "."
-    sleep 2
+  local name=$1 url=$2 max=${3:-60} i=0
+  echo -ne "  Waiting for ${CYAN}$name${RESET} "
+  until curl -sf "$url" &>/dev/null; do
+    sleep 2; i=$((i+2))
+    echo -ne "."
+    [ $i -ge $max ] && { echo -e " ${RED}TIMEOUT${RESET}"; return 1; }
   done
-  echo -e " ${COLOR_YELLOW}TIMEOUT${COLOR_RESET}"
+  echo -e " ${GREEN}✓${RESET}"
 }
 
-case "$CMD" in
+print_urls() {
+  echo -e "\n${GREEN}${BOLD}═══════════════════════════════════════════${RESET}"
+  echo -e "${GREEN}  DevilChain Network — All Services Ready${RESET}"
+  echo -e "${GREEN}${BOLD}═══════════════════════════════════════════${RESET}"
+  echo -e "  ${CYAN}Node REST API ${RESET}   → http://localhost:8545"
+  echo -e "  ${CYAN}GraphQL       ${RESET}   → http://localhost:8546/graphql"
+  echo -e "  ${CYAN}DevilGuard AI ${RESET}   → http://localhost:8547"
+  echo -e "  ${CYAN}DevilStorage  ${RESET}   → http://localhost:8548"
+  echo -e "  ${CYAN}DevilBridge   ${RESET}   → http://localhost:8549"
+  echo -e "  ${CYAN}DevilScan     ${RESET}   → http://localhost:3000"
+  echo -e "  ${CYAN}DevilSocial   ${RESET}   → http://localhost:3001"
+  echo -e "  ${CYAN}DevilChat     ${RESET}   → http://localhost:3002"
+  echo -e "${GREEN}${BOLD}═══════════════════════════════════════════${RESET}\n"
+}
 
-all)
-  print_banner
-  echo -e "${COLOR_CYAN}[1/4] Building all Docker images...${COLOR_RESET}"
-  $COMPOSE build --parallel
+cmd_start() {
+  banner; check_deps; check_resources
+  echo -e "${CYAN}── Building & Starting Services ─────────${RESET}"
 
-  echo -e "${COLOR_CYAN}[2/4] Starting all services...${COLOR_RESET}"
-  $COMPOSE up -d
+  if [ "$DEVIL_MODE" = "minimal" ]; then
+    $COMPOSE up -d --build devilchain-node devilguard-ai redis
+  elif [ "$DEVIL_MODE" = "lite" ]; then
+    $COMPOSE up -d --build devilchain-node devilguard-ai devilstorage devilbridge devilscan redis
+  else
+    $COMPOSE up -d --build
+  fi
 
-  echo -e "${COLOR_CYAN}[3/4] Waiting for services to be healthy...${COLOR_RESET}"
-  wait_healthy "DevilChain Node" "http://localhost:8545/api/status"
-  wait_healthy "DevilGuard AI"   "http://localhost:8547/health"
-  wait_healthy "DevilStorage"    "http://localhost:8548/stats"
-  wait_healthy "DevilScan"       "http://localhost:3000"
+  wait_healthy "node"    "http://localhost:8545/api/status"
+  wait_healthy "AI"      "http://localhost:8547/health"      40
+  wait_healthy "storage" "http://localhost:8548/stats"       30
+  wait_healthy "bridge"  "http://localhost:8549/health"      30
+  wait_healthy "explorer" "http://localhost:3000"            60
 
-  echo -e "${COLOR_CYAN}[4/4] Services ready!${COLOR_RESET}"
-  echo ""
-  echo -e "${COLOR_GREEN}  SERVICE MAP:${COLOR_RESET}"
-  echo "  ┌──────────────────────────┬─────────────────────────────┐"
-  echo "  │ Service                  │ URL                         │"
-  echo "  ├──────────────────────────┼─────────────────────────────┤"
-  echo "  │ DevilChain Node (REST)   │ http://localhost:8545       │"
-  echo "  │ GraphQL API              │ http://localhost:8546/gql   │"
-  echo "  │ DevilGuard AI            │ http://localhost:8547       │"
-  echo "  │ DevilStorage             │ http://localhost:8548       │"
-  echo "  │ DevilBridge              │ http://localhost:8549       │"
-  echo "  │ DevilScan Explorer       │ http://localhost:3000       │"
-  echo "  │ DevilSocial              │ http://localhost:3001       │"
-  echo "  │ DevilChat                │ http://localhost:3002       │"
-  echo "  │ PostgreSQL               │ localhost:5432              │"
-  echo "  │ Redis                    │ localhost:6379              │"
-  echo "  │ MongoDB                  │ localhost:27017             │"
-  echo "  └──────────────────────────┴─────────────────────────────┘"
-  echo ""
-  echo -e "  Run tests : ${COLOR_YELLOW}bash docker/start.sh test${COLOR_RESET}"
-  echo -e "  View logs : ${COLOR_YELLOW}bash docker/start.sh logs${COLOR_RESET}"
-  echo -e "  Stop all  : ${COLOR_YELLOW}bash docker/start.sh stop${COLOR_RESET}"
-  ;;
+  print_urls
+}
 
-node)
-  print_banner
-  echo "Starting blockchain node only..."
-  $COMPOSE up -d devilchain-node redis postgres mongodb
-  wait_healthy "DevilChain Node" "http://localhost:8545/api/status"
-  echo -e "${COLOR_GREEN}Node started!${COLOR_RESET}"
-  ;;
+cmd_node() {
+  banner; check_deps
+  echo -e "${CYAN}Starting node + AI only (minimal)...${RESET}"
+  $COMPOSE up -d --build devilchain-node devilguard-ai redis
+  wait_healthy "node" "http://localhost:8545/api/status"
+  echo -e "  ${GREEN}✓ Node ready at http://localhost:8545${RESET}\n"
+}
 
-test)
-  print_banner
-  echo -e "${COLOR_CYAN}Running full test suite...${COLOR_RESET}"
-  $COMPOSE --profile test run --rm devil-tester
-  ;;
+cmd_test() {
+  banner; check_deps
+  echo -e "${CYAN}── Running DevilChain Test Suite ────────${RESET}\n"
+  # Ensure node is up
+  if ! curl -sf http://localhost:8545/api/status &>/dev/null; then
+    echo -e "  ${YELLOW}Node not running — starting node first...${RESET}"
+    cmd_node
+  fi
+  # Run pytest in container
+  docker run --rm --network host \
+    -e NODE_API=http://localhost:8545 \
+    -e AI_API=http://localhost:8547 \
+    -e STORAGE_API=http://localhost:8548 \
+    -v "$CD/tests:/tests" \
+    python:3.11-slim bash -c "
+      pip install -q requests pytest colorama cryptography &&
+      pytest /tests/ -v --tb=short --color=yes -x
+    "
+}
 
-stop)
-  echo "Stopping all DevilChain services..."
-  $COMPOSE down
-  echo -e "${COLOR_GREEN}All services stopped.${COLOR_RESET}"
-  ;;
-
-status)
-  echo -e "${COLOR_CYAN}DevilChain Service Status${COLOR_RESET}"
+cmd_status() {
+  echo -e "${CYAN}── Container Status ─────────────────────${RESET}"
   $COMPOSE ps
-  echo ""
-  echo "API Tests:"
-  for svc in \
-    "Node|http://localhost:8545/api/status" \
-    "AI|http://localhost:8547/health" \
-    "Storage|http://localhost:8548/stats"; do
-    name=$(echo $svc | cut -d'|' -f1)
-    url=$(echo $svc | cut -d'|' -f2)
-    if curl -fsS "$url" >/dev/null 2>&1; then
-      echo -e "  ${COLOR_GREEN}✅ $name${COLOR_RESET}"
+  echo
+  echo -e "${CYAN}── Resource Usage ───────────────────────${RESET}"
+  docker stats --no-stream --format \
+    "table {{.Name}}\t{{.CPUPerc}}\t{{.MemUsage}}\t{{.MemPerc}}" \
+    2>/dev/null | head -20
+  echo
+  echo -e "${CYAN}── Health Checks ────────────────────────${RESET}"
+  for ep in \
+    "Node:http://localhost:8545/api/status" \
+    "AI:http://localhost:8547/health" \
+    "Storage:http://localhost:8548/stats" \
+    "Bridge:http://localhost:8549/health" \
+    "Explorer:http://localhost:3000"; do
+    name=${ep%%:*}; url=${ep#*:}
+    if curl -sf "$url" &>/dev/null; then
+      echo -e "  ${GREEN}✓ $name${RESET}"
     else
-      echo -e "  ${COLOR_RED}❌ $name${COLOR_RESET}"
+      echo -e "  ${RED}✗ $name (down)${RESET}"
     fi
   done
-  ;;
+}
 
-logs)
-  $COMPOSE logs -f devilchain-node devilguard-ai
-  ;;
+cmd_logs() {
+  $COMPOSE logs -f --tail=50 devilchain-node devilguard-ai
+}
 
-clean)
-  echo "Removing all containers, volumes, images..."
-  $COMPOSE down -v --rmi all
-  echo -e "${COLOR_GREEN}Cleaned.${COLOR_RESET}"
-  ;;
+cmd_stop()  { $COMPOSE stop; echo -e "${GREEN}All services stopped.${RESET}"; }
+cmd_clean() {
+  $COMPOSE down -v --remove-orphans
+  docker system prune -f
+  echo -e "${GREEN}All containers + volumes removed.${RESET}"
+}
 
-*)
-  echo "Usage: bash docker/start.sh [all|node|test|stop|status|logs|clean]"
-  ;;
+case "${1:-all}" in
+  all|start) cmd_start  ;;
+  node)      cmd_node   ;;
+  test)      cmd_test   ;;
+  status)    cmd_status ;;
+  logs)      cmd_logs   ;;
+  stop)      cmd_stop   ;;
+  clean)     cmd_clean  ;;
+  *) echo -e "Usage: $0 {all|node|test|status|logs|stop|clean}" ;;
 esac
