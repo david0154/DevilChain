@@ -1,0 +1,46 @@
+# Rust
+target/
+Cargo.lock
+
+# Node.js
+node_modules/
+.next/
+dist/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+*.egg-info/
+
+# Flutter
+.dart_tool/
+build/
+*.g.dart
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+logs/
+*.log
+
+# Keys (never commit private keys!)
+*.pem
+*.key
+wallet.dat
+keystore/
