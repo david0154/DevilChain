@@ -1,0 +1,93 @@
+# DevilChain — 3-node testnet
+# Usage: docker-compose up --build
+# Developed by Nexuzy Lab (nexuzy.tech) | Powered by Devil One (devilone.in)
+
+version: '3.8'
+
+services:
+
+  # ── Bootstrap / Seed node ───────────────────────────────────────────────────
+  node1:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: devilchain-node1
+    ports:
+      - "8545:8545"    # REST API
+      - "8546:8546"    # GraphQL
+      - "30303:30303"  # P2P
+    environment:
+      NODE_PORT:        "8545"
+      GRAPHQL_PORT:     "8546"
+      P2P_PORT:         "30303"
+      MINER_ADDR:       "db1xmining_pool_devilchain_000000000"
+      BOOTSTRAP_PEERS:  ""           # seed node has no peers to start
+      RUST_LOG:         "info"
+      AI_API:           "http://node1:8547"
+    volumes:
+      - node1-data:/data/chain
+    networks:
+      - devilnet
+    restart: unless-stopped
+
+  # ── Node 2 ──────────────────────────────────────────────────────────────────
+  node2:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: devilchain-node2
+    ports:
+      - "8555:8545"
+      - "8556:8546"
+      - "30304:30303"
+    environment:
+      NODE_PORT:        "8545"
+      GRAPHQL_PORT:     "8546"
+      P2P_PORT:         "30303"
+      MINER_ADDR:       "db1xnode2_validator_000000000000000"
+      BOOTSTRAP_PEERS:  "node1:8545"  # sync from node1 REST API
+      RUST_LOG:         "info"
+      AI_API:           "http://node2:8547"
+    volumes:
+      - node2-data:/data/chain
+    networks:
+      - devilnet
+    depends_on:
+      - node1
+    restart: unless-stopped
+
+  # ── Node 3 ──────────────────────────────────────────────────────────────────
+  node3:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: devilchain-node3
+    ports:
+      - "8565:8545"
+      - "8566:8546"
+      - "30305:30303"
+    environment:
+      NODE_PORT:        "8545"
+      GRAPHQL_PORT:     "8546"
+      P2P_PORT:         "30303"
+      MINER_ADDR:       "db1xnode3_validator_000000000000000"
+      BOOTSTRAP_PEERS:  "node1:8545,node2:8545"  # sync from both
+      RUST_LOG:         "info"
+      AI_API:           "http://node3:8547"
+    volumes:
+      - node3-data:/data/chain
+    networks:
+      - devilnet
+    depends_on:
+      - node1
+      - node2
+    restart: unless-stopped
+
+volumes:
+  node1-data:
+  node2-data:
+  node3-data:
+
+networks:
+  devilnet:
+    driver: bridge
