@@ -1,114 +1,97 @@
+//! DevilChain Node Entry Point
+//! Fixed: tokio::join! with supervised tasks (not select!)
+//!
+//! Developed by Nexuzy Lab (nexuzy.tech) | Powered by Devil One (devilone.in)
+
+use std::sync::{Arc, RwLock};
+use tokio::signal;
 mod blockchain;
 mod consensus;
-mod mempool;
-mod network;
 mod wallet;
-mod api;
-mod ai;
-mod dao;
-mod mining;
+mod tokenomics;
+mod mempool;
 mod validator;
-mod storage;
+mod mining;
+mod network;
+mod api;
 mod graphql;
+mod storage;
+mod dao;
+mod ai;
 
-use std::sync::Arc;
-use tokio::sync::RwLock;
-use log::info;
-use clap::{Parser, Subcommand};
-
-#[derive(Parser)]
-#[command(name = "devilchain-node", about = "DevilChain Network Node", version)]
-struct Cli {
-    #[command(subcommand)]
-    command: Commands,
-}
-
-#[derive(Subcommand)]
-enum Commands {
-    /// Start the DevilChain node
-    Start {
-        #[arg(long, default_value = "lite")]
-        mode: String,
-        #[arg(long, default_value = "/data/devilchain")]
-        db_path: String,
-    },
-    /// Initialize node configuration
-    Init {
-        #[arg(long, default_value = "lite")]
-        r#type: String,
-    },
-    /// Show node status
-    Status,
-    /// Generate a new wallet address
-    GenWallet,
-    /// Mine blocks manually (dev mode)
-    Mine {
-        #[arg(long)]
-        wallet: String,
-        #[arg(long, default_value = "4")]
-        threads: u32,
-    },
-}
+use blockchain::Blockchain;
+use consensus::DHPConsensus;
+use mempool::Mempool;
 
 #[tokio::main]
-async fn main() -> anyhow::Result<()> {
+async fn main() {
+    // Logging
+    std::env::set_var("RUST_LOG", std::env::var("RUST_LOG").unwrap_or_else(|_| "warn".into()));
     env_logger::init();
-    let cli = Cli::parse();
 
-    match cli.command {
-        Commands::Init { r#type } => {
-            println!("🔥 Initializing DevilChain node (type: {})...", r#type);
-            println!("Address prefix: db1x");
-            println!("Consensus: Devil Hybrid Protocol (DHP)");
-            println!("Config written to: /etc/devilchain/config.toml");
-            println!("✅ Node initialized. Run: devilchain-node start");
-        }
+    println!("  ╔══════════════════════════════════════╗");
+    println!("  ║   DevilChain Network — Testnet 2026  ║");
+    println!("  ║   nexuzy.tech | devilone.in          ║");
+    println!("  ╚══════════════════════════════════════╝\n");
 
-        Commands::GenWallet => {
-            let w = wallet::Wallet::generate();
-            println!("🔐 New DevilChain Wallet");
-            println!("Address    : {}", w.address);
-            println!("Public Key : {}", w.public_key);
-            println!("⚠️  Back up your mnemonic phrase securely!");
-        }
+    // Shared state
+    let blockchain = Arc::new(RwLock::new(Blockchain::default()));
+    let mempool    = Arc::new(RwLock::new(Mempool::default()));
+    let consensus  = Arc::new(RwLock::new(DHPConsensus::default()));
 
-        Commands::Status => {
-            println!("DevilChain Network Status");
-            println!("Coin: DevilCoin (DVC) | Symbol: DVL");
-            println!("Consensus: DHP (PoS + Micro PoW + DAO + AI)");
-            println!("API: http://localhost:8545");
-            println!("GraphQL: http://localhost:8546/graphql");
-        }
+    let bc1 = Arc::clone(&blockchain);
+    let bc2 = Arc::clone(&blockchain);
+    let bc3 = Arc::clone(&blockchain);
+    let bc4 = Arc::clone(&blockchain);
+    let mp1 = Arc::clone(&mempool);
+    let mp2 = Arc::clone(&mempool);
+    let cs1 = Arc::clone(&consensus);
 
-        Commands::Mine { wallet, threads } => {
-            println!("⛏️ DevilMine Engine started");
-            println!("Wallet: {} | Threads: {} | Algorithm: DVLHash-AI", wallet, threads);
-        }
-
-        Commands::Start { mode, db_path } => {
-            info!("🔥 DevilChain Network Node Starting...");
-            info!("Mode: {} | DB: {}", mode, db_path);
-            info!("Native Coin: DevilCoin (DVC) | Symbol: DVL");
-            info!("Consensus: Devil Hybrid Protocol (DHP)");
-            info!("REST API: :8545 | GraphQL: :8546");
-
-            let blockchain = Arc::new(RwLock::new(blockchain::Blockchain::new()));
-            let mempool = Arc::new(RwLock::new(mempool::Mempool::new()));
-
-            let bc1 = Arc::clone(&blockchain);
-            let bc2 = Arc::clone(&blockchain);
-            let bc3 = Arc::clone(&blockchain);
-            let bc4 = Arc::clone(&blockchain);
-            let mp = Arc::clone(&mempool);
-
-            tokio::select! {
-                _ = api::start_api_server(bc1) => {},
-                _ = graphql::start_graphql_server(bc2) => {},
-                _ = network::start_p2p(bc3) => {},
-                _ = mining::start_mining(bc4, mp) => {},
+    // ✅ Supervised tasks — each restarts on panic, all run independently
+    let api_task = tokio::spawn(async move {
+        loop {
+            if let Err(e) = api::start_api_server(Arc::clone(&bc1),
+                                                   Arc::clone(&mp1)).await {
+                log::error!("API server error: {} — restarting in 2s", e);
             }
+            tokio::time::sleep(std::time::Duration::from_secs(2)).await;
         }
-    }
+    });
 
-    Ok(())
+    let graphql_task = tokio::spawn(async move {
+        loop {
+            if let Err(e) = graphql::start_graphql_server(Arc::clone(&bc2)).await {
+                log::error!("GraphQL error: {} — restarting in 2s", e);
+            }
+            tokio::time::sleep(std::time::Duration::from_secs(2)).await;
+        }
+    });
+
+    let network_task = tokio::spawn(async move {
+        loop {
+            if let Err(e) = network::start_p2p(Arc::clone(&bc3)).await {
+                log::error!("P2P error: {} — restarting in 5s", e);
+            }
+            tokio::time::sleep(std::time::Duration::from_secs(5)).await;
+        }
+    });
+
+    let mining_task = tokio::spawn(async move {
+        loop {
+            if let Err(e) = mining::start_mining(
+                Arc::clone(&bc4), Arc::clone(&mp2), Arc::clone(&cs1)
+            ).await {
+                log::error!("Mining error: {} — restarting in 3s", e);
+            }
+            tokio::time::sleep(std::time::Duration::from_secs(3)).await;
+        }
+    });
+
+    // ✅ Wait for Ctrl+C, then graceful shutdown
+    signal::ctrl_c().await.expect("Failed to listen for Ctrl+C");
+    println!("\nShutting down DevilChain node...");
+    api_task.abort();
+    graphql_task.abort();
+    network_task.abort();
+    mining_task.abort();
 }
