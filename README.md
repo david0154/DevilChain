@@ -8,7 +8,9 @@
 
 <p align="center">
   <b>Lightweight Hybrid AI-Powered DAO Blockchain Ecosystem</b><br/>
-  Native Coin: <b>DevilCoin (DVC)</b> &nbsp;|&nbsp; Symbol: <b>DVL</b>
+  Native Coin: <b>DevilCoin</b> &nbsp;|&nbsp;
+  On-chain ticker: <b>DVC</b> &nbsp;|&nbsp;
+  DEX / exchange ticker: <b>DVL</b>
 </p>
 
 <p align="center">
@@ -65,6 +67,21 @@
 
 ---
 
+## 🪙 Coin Name & Ticker Explained
+
+| Field | Value | Notes |
+|---|---|---|
+| **Full name** | DevilCoin | Always the human-readable name |
+| **On-chain ticker** | **DVC** | Used in wallet, API, blockchain code, gas fees |
+| **Exchange ticker** | **DVL** | Used on DEX / CEX listings, trading pairs |
+| **Algorithm** | DVLHash-AI | CPU-optimized, anti-ASIC |
+| **Smallest unit** | micro-DVC (µDVC) | 1 DVC = 1,000,000 µDVC |
+| **Decimals** | 6 | Same as USDC model |
+
+> **Short answer:** Use **DVC** everywhere in the codebase and wallet. Use **DVL** only on exchanges and trading pairs.
+
+---
+
 ## 🔥 Vision
 
 DevilChain is a **lightweight hybrid AI-powered DAO blockchain** ecosystem designed for:
@@ -99,9 +116,98 @@ DevilChain is a **lightweight hybrid AI-powered DAO blockchain** ecosystem desig
 
 ---
 
+## 💰 Tokenomics — DevilCoin (DVC / DVL)
+
+### Supply
+
+| Property | Value |
+|---|---|
+| Total Supply | 1,000,000,000 DVC |
+| Decimals | 6 (1 DVC = 1,000,000 µDVC) |
+| Block Reward | 50 DVC (halves every 2,100,000 blocks) |
+| Min Gas Fee | 0.01 DVC (floor for all tx types) |
+| On-chain ticker | DVC |
+| Exchange ticker | DVL |
+
+### Genesis Allocation
+
+| Allocation | % | Amount | Wallet |
+|---|---|---|---|
+| Mining Rewards | 10% | 100,000,000 DVC | `db1xmining_pool_devilchain_000000000` |
+| Ecosystem Growth | 20% | 200,000,000 DVC | `db1xecosystem` |
+| DAO Treasury | 15% | 150,000,000 DVC | `db1xdao_treasury` |
+| Dev Fund | 10% | 100,000,000 DVC | `db1xdev_nexuzy_lab_david0154_00000000` |
+| Investors | 5% | 50,000,000 DVC | `db1xinvestors` |
+| Community | 5% | 50,000,000 DVC | `db1xcommunity` |
+| Marketing | 5% | 50,000,000 DVC | `db1xmarketing_fund_devilchain_000000` |
+| **Pre-minted total** | **70%** | **700,000,000 DVC** | — |
+| Mining emission (remaining) | 30% | 300,000,000 DVC | minted per block |
+
+---
+
+## 💸 Fee Schedule
+
+### Transaction Fee Rates
+
+| Transaction Type | Fee Rate | Example (100 DVC send) |
+|---|---|---|
+| Standard Transfer | **0.3%** | 0.30 DVC |
+| DEX Swap | **1.5%** | 1.50 DVC |
+| NFT Marketplace Sale | **2.0%** | 2.00 DVC |
+| Smart Contract Deploy | **5.0%** min | 5.00 DVC+ |
+
+> Minimum fee floor: **0.01 DVC** regardless of amount.
+
+### Fee Distribution (active — burn < 200M DVC)
+
+| Recipient | % | Example (1.5 DVC DEX fee) | Wallet |
+|---|---|---|---|
+| Miner / Validator | **55%** | 0.8250 DVC | Block validator |
+| Development Fund | **18%** | 0.2700 DVC | `db1xdev_nexuzy_lab_david0154_00000000` |
+| 🔥 Burn | **10%** | 0.1500 DVC | `db1x000000000000000000000000000burn` |
+| Liquidity Pool | **10%** | 0.1500 DVC | `db1xliquidity_lock_vault_dao_00000000` |
+| Marketing | **7%** | 0.1050 DVC | `db1xmarketing_fund_devilchain_000000` |
+| **Total** | **100%** | **1.5000 DVC** | — |
+
+### Fee Distribution (after burn cap reached — burn = 200M DVC)
+
+Once 200,000,000 DVC has been burned (20% of supply), burning stops automatically.
+The 10% burn allocation is redistributed:
+
+| Recipient | % | Notes |
+|---|---|---|
+| Miner / Validator | **55%** | Unchanged |
+| Development Fund | **23%** | +5% from stopped burn |
+| 🔥 Burn | **0%** | Auto-stopped |
+| Liquidity Pool | **15%** | +5% from stopped burn |
+| Marketing | **7%** | Unchanged |
+
+---
+
+## 🔥 Burn Rule
+
+- Burn is **active by default** from genesis.
+- Burns stop automatically when total burned reaches **200,000,000 DVC**.
+- Formula: `1,000,000,000 × 20% = 200,000,000 DVC`
+- After burn stops, leftover burn fee is split equally between Dev Fund and Liquidity Pool.
+- Burn address: `db1x000000000000000000000000000burn` — coins sent here are **permanently destroyed**.
+
+---
+
+## 💧 Liquidity Pool Auto-Lock Rule
+
+- When liquidity vault balance reaches **200,000,000 DVC** (20% of total supply):
+  - Protocol automatically locks **5%** of liquidity for **5 years**.
+  - Lock amount: `200,000,000 × 5% = 10,000,000 DVC`
+  - Smart-contract time-lock — cannot be withdrawn until lock expires.
+  - Unlock happens automatically after 5 years (`157,680,000 seconds`).
+- This only triggers **once** per deployment.
+
+---
+
 ## 🏗️ Architecture
 
-**Type:** Hybrid Layer-1 Blockchain
+**Type:** Hybrid Layer-1 Blockchain  
 **Consensus:** Devil Hybrid Protocol (DHP)
 
 | Layer | Component |
@@ -116,19 +222,19 @@ DevilChain is a **lightweight hybrid AI-powered DAO blockchain** ecosystem desig
 ```
 User Transaction
        ↓
-Mempool Validation
+Mempool Validation (nonce, sig, gas)
        ↓
 DevilGuard AI Risk Scan
        ↓
-Validator Selection (PoS)
+Validator Selection (VRF-weighted PoS)
        ↓
-Micro PoW Puzzle Check
+Micro PoW (spawn_blocking — async-safe)
        ↓
-Block Creation + Merkle Root
+Block Creation + Binary Merkle Root
        ↓
-DAO Verification Signature
+DAO Signature (deterministic SHA-256)
        ↓
-Final Block Confirmation
+Final Block Confirmation + Fee Split
 ```
 
 ---
@@ -141,8 +247,8 @@ Final Block Confirmation
 | Secondary Services | Python, Golang |
 | Smart Contracts | Solidity + WASM |
 | VM Engine | Modified EVM |
-| Database | RocksDB |
-| Networking | libp2p |
+| Database | sled (embedded) |
+| Networking | HTTP P2P gossip (libp2p-compatible) |
 | APIs | REST (port 8545) + GraphQL (port 8546) |
 | AI Runtime | ONNX Runtime / TinyML |
 | Explorer | Next.js 14 + Tailwind CSS |
@@ -173,23 +279,13 @@ Final Block Confirmation
 - ✅ Anti-ASIC & Anti-GPU domination
 - ✅ Dynamic difficulty adjustment
 - ✅ AI-assisted optimization (+bonus DVC per block)
-- ✅ Block Reward: **50 DVC** per block + AI bonus
+- ✅ Block Reward: **50 DVC** per block (halving every 2.1M blocks)
 
----
-
-## 💰 Tokenomics — DevilCoin (DVC/DVL)
-
-| Allocation | % | Amount | Wallet |
-|---|---|---|---|
-| Mining Rewards | 35% | 350,000,000 DVC | `db1xmining_pool` |
-| Ecosystem Growth | 20% | 200,000,000 DVC | `db1xecosystem` |
-| DAO Treasury | 15% | 150,000,000 DVC | `db1xdao_treasury` |
-| Team & Development | 10% | 100,000,000 DVC | `db1xteam` |
-| Validators | 10% | 100,000,000 DVC | `db1xvalidator_pool` |
-| Investors | 5% | 50,000,000 DVC | `db1xinvestors` |
-| Community Rewards | 5% | 50,000,000 DVC | `db1xcommunity` |
-
-**Total Supply:** 1,000,000,000 DVC &nbsp;|&nbsp; **Decimals:** 18 &nbsp;|&nbsp; **Symbol:** DVC / DVL
+```bash
+# Set your miner address in docker-compose.yml or env:
+MINER_ADDR=db1x<your_address>
+MINER_STAKE=500000000  # 500 DVC in µDVC
+```
 
 ---
 
@@ -200,25 +296,32 @@ Final Block Confirmation
 | TPS | 5,000 – 20,000 |
 | Block Time | 2 – 5 seconds |
 | Finality | < 10 seconds |
-| Gas Fee | < 0.01 DVC |
+| Gas Fee | 0.01 – 5% depending on tx type |
 | Energy Usage | Very Low (PoS dominant) |
 
 ---
 
 ## 🚀 Quick Start
 
-### Docker (Recommended)
+### 3-Node Testnet (Docker)
 ```bash
 git clone https://github.com/david0154/DevilChain.git
 cd DevilChain
-bash docker/start.sh all
+docker-compose up --build
 ```
 
-### Service Map after start:
+This starts:
+| Node | REST | GraphQL | Role |
+|---|---|---|---|
+| node1 | :8545 | :8546 | Seed / Bootstrap |
+| node2 | :8555 | :8556 | Syncs from node1 |
+| node3 | :8565 | :8566 | Syncs from node1+node2 |
+
+### Service Map
 | Service | URL |
 |---|---|
-| DevilChain Node REST | http://localhost:8545 |
-| GraphQL API | http://localhost:8546/graphql |
+| REST API | http://localhost:8545 |
+| GraphQL | http://localhost:8546/graphql |
 | DevilGuard AI | http://localhost:8547 |
 | DevilStorage | http://localhost:8548 |
 | DevilBridge | http://localhost:8549 |
@@ -226,43 +329,22 @@ bash docker/start.sh all
 | DevilSocial | http://localhost:3001 |
 | DevilChat | http://localhost:3002 |
 
-### Run Tests
+### Example: Send Transaction
 ```bash
-bash docker/start.sh test
-bash docker/quick_test.sh
+curl -X POST http://localhost:8545/api/send \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "from": "db1x<your_address>",
+    "to": "db1x<recipient>",
+    "amount": 100000000,
+    "gas_fee": 300000,
+    "nonce": 0,
+    "tx_type": "Transfer",
+    "public_key": "<hex_ed25519_pubkey>",
+    "signature": "<hex_ed25519_sig>"
+  }'
 ```
-
-### Generate Test Wallets
-```bash
-python docker/tests/generate_wallets.py --count 3 --export
-```
-
-### Generate & Check Coins
-```bash
-python docker/tests/generate_coin.py --mint --export
-```
-
----
-
-## 📁 Repository Structure
-
-```
-DevilChain/
-├── core/              # Rust blockchain core
-├── wallet/            # DevilX Wallet (Flutter)
-├── explorer/          # DevilScan Explorer (Next.js 14)
-├── contracts/         # Smart contracts (Solidity)
-├── ai/                # DevilGuard AI (Python FastAPI)
-├── storage/           # DevilStorage Node (Rust)
-├── identity/          # DevilID (DID:devil)
-├── social/            # DevilSocial (Next.js 14)
-├── chat/              # DevilChat (Next.js 14)
-├── bridge/            # DevilBridge (Python FastAPI)
-├── sdk/               # SDKs (JS, Kotlin, Swift, Rust, Python)
-├── docker/            # Docker Compose + test suite
-├── docs/              # API.md, TESTING.md, DOCKER.md
-└── README.md
-```
+> All amounts in µDVC. `100000000 µDVC = 100 DVC`. Gas for a Transfer = 0.3% = 300,000 µDVC = 0.30 DVC.
 
 ---
 
@@ -278,22 +360,21 @@ GET  /api/wallet/{address}
 GET  /api/validators
 GET  /api/dao/proposals
 GET  /api/coin
+GET  /api/peers
 POST /api/send
 POST /api/stake
-POST /api/unstake
 POST /api/vote
 POST /api/faucet
+POST /api/p2p/block
 ```
 
-### Bridge API (port 8549)
-```http
-GET  /health
-GET  /chains
-POST /bridge/initiate
-POST /bridge/lock
-GET  /bridge/status/{bridge_id}
-GET  /bridge/history/{address}
-GET  /stats
+### GraphQL (port 8546)
+```graphql
+query { status }
+query { block(height: 1) { blockHash validator txCount } }
+query { latestBlock { height blockHash aiScore } }
+query { transaction(hash: "0xabc...") { from to amount } }
+query { wallet(address: "db1x...") { balance nonce } }
 ```
 
 ---
@@ -301,8 +382,65 @@ GET  /stats
 ## 🗳️ DAO Governance
 
 ```
-Voting Power = Stake Amount + Reputation Score + Validator Score
+Voting Power = Stake Amount × Reputation Score (integer, no f64)
 ```
+
+- Proposals: any validator with enough stake can create
+- Voting window: 10,000 blocks
+- Quorum required for pass
+- Proposals auto-tally after every mined block
+- DAO signature embedded in every block header
+
+---
+
+## 📁 Repository Structure
+
+```
+DevilChain/
+├── core/              # Rust blockchain core
+│   └── src/
+│       ├── blockchain/  # Block, Transaction, Ledger, Merkle
+│       ├── consensus/   # DHP, VRF validator selection
+│       ├── tokenomics/  # Supply, burn cap, fee split, timelock
+│       ├── wallet/      # Ed25519 keygen (OsRng)
+│       ├── mempool/     # Nonce-protected fee-priority queue
+│       ├── mining/      # spawn_blocking PoW
+│       ├── network/     # HTTP P2P gossip
+│       ├── api/         # REST (axum)
+│       ├── graphql/     # GraphQL (async-graphql)
+│       ├── storage/     # sled persistence
+│       ├── dao/         # Proposals + voting + tally
+│       └── ai/          # DevilGuard rule-based scorer
+├── wallet/            # DevilX Wallet (Flutter)
+├── explorer/          # DevilScan Explorer (Next.js 14)
+├── contracts/         # Smart contracts (Solidity)
+├── ai/                # DevilGuard AI (Python FastAPI)
+├── storage/           # DevilStorage Node
+├── identity/          # DevilID (DID:devil)
+├── social/            # DevilSocial (Next.js 14)
+├── chat/              # DevilChat (Next.js 14)
+├── bridge/            # DevilBridge (Python FastAPI)
+├── sdk/               # SDKs (JS, Kotlin, Swift, Rust, Python)
+├── docker-compose.yml # 3-node testnet
+├── Dockerfile
+└── docs/
+    ├── fee-schedule.md
+    └── burn-liquidity-rules.md
+```
+
+---
+
+## 🛡️ Security
+
+- **Signatures:** Ed25519 (real cryptography, `OsRng` — not `thread_rng`)
+- **Wallet Encryption:** AES-256-GCM
+- **Key Exchange:** Curve25519
+- **Recovery:** BIP39-style mnemonic (12 words)
+- **TX Verification:** Every transaction verified on mempool entry, mining, and block acceptance
+- **AI Security:** DevilGuard AI scores every block (reject if < 50/100)
+- **Anti-Sybil:** Stake-based identity + DAO approval
+- **Replay Protection:** Nonce-based (tx nonce must equal ledger nonce exactly)
+- **No f64 for money:** All amounts are `u128` µDVC — zero precision loss
 
 ---
 
@@ -314,19 +452,7 @@ Voting Power = Stake Amount + Reputation Score + Validator Score
 | Phase 2 | Smart contracts, Staking, NFT support, Validators | ✅ Complete |
 | Phase 3 | DevilGuard AI, AI Node, AI moderation | ✅ Complete |
 | Phase 4 | DevilSocial, DevilChat, DevilID, DevilStorage | ✅ Complete |
-| Phase 5 | DevilBridge, Mainnet launch, DevilOS | ✅ Complete |
-
----
-
-## 🛡️ Security
-
-- **Wallet Encryption:** AES-256-GCM
-- **Signatures:** Ed25519
-- **Key Exchange:** Curve25519
-- **Recovery:** BIP39 Mnemonic
-- **AI Security:** DevilGuard AI scans all TXs, contracts, and nodes
-- **Anti-Sybil:** Stake-based identity + DAO approval
-- **DDoS Protection:** Rate limiting + AI anomaly detection
+| Phase 5 | DevilBridge, Mainnet launch, DevilOS | 🔄 In Progress |
 
 ---
 
