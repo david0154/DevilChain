@@ -1,0 +1,31 @@
+[package]
+name = "devilchain-core"
+version = "0.1.0"
+edition = "2021"
+authors = ["David <david0154>"]
+description = "DevilChain Network - Hybrid AI-Powered DAO Blockchain Core"
+license = "MIT"
+
+[[bin]]
+name = "devilchain-node"
+path = "src/main.rs"
+
+[dependencies]
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+sha2 = "0.10"
+ed25519-dalek = "2.0"
+rocksdb = "0.21"
+tokio = { version = "1", features = ["full"] }
+libp2p = "0.53"
+axum = "0.7"
+hex = "0.4"
+chrono = "0.4"
+rand = "0.8"
+log = "0.4"
+env_logger = "0.11"
+anyhow = "1.0"
+thiserror = "1.0"
+
+[dev-dependencies]
+tokio-test = "0.4"
