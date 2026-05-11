@@ -1,5 +1,5 @@
 //! DevilChain Validator System
-//! Handles: registration, reputation, selection, rewards, slashing
+//! Handles: registration, reputation, selection, rewards
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -7,113 +7,82 @@ use std::collections::HashMap;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Validator {
     pub address: String,
-    pub staked_amount: f64,
+    pub staked_dvc: f64,
     pub reputation_score: f64,
     pub validator_score: f64,
     pub blocks_validated: u64,
-    pub blocks_missed: u64,
-    pub is_active: bool,
+    pub active: bool,
     pub registered_at: u64,
-    pub last_active: u64,
 }
 
 impl Validator {
-    pub fn new(address: String, staked: f64, timestamp: u64) -> Self {
+    pub fn new(address: String, staked_dvc: f64) -> Self {
         Validator {
             address,
-            staked_amount: staked,
-            reputation_score: 100.0,
-            validator_score: 1.0,
+            staked_dvc,
+            reputation_score: 0.0,
+            validator_score: 0.0,
             blocks_validated: 0,
-            blocks_missed: 0,
-            is_active: true,
-            registered_at: timestamp,
-            last_active: timestamp,
+            active: staked_dvc >= 100.0,
+            registered_at: crate::blockchain::now_timestamp(),
         }
     }
 
     /// Voting Power = Stake + Reputation + Validator Score
     pub fn voting_power(&self) -> f64 {
-        self.staked_amount + self.reputation_score + self.validator_score
+        self.staked_dvc + self.reputation_score + self.validator_score
     }
 
-    /// Slash validator for misbehavior
-    pub fn slash(&mut self, amount: f64) {
-        self.staked_amount = (self.staked_amount - amount).max(0.0);
-        self.reputation_score = (self.reputation_score - 20.0).max(0.0);
-        if self.staked_amount < 100.0 {
-            self.is_active = false;
-        }
-    }
-
-    /// Reward validator for successful block validation
-    pub fn reward(&mut self, block_reward: f64, timestamp: u64) {
-        self.staked_amount += block_reward;
+    pub fn add_block_reward(&mut self, reward: f64) {
         self.blocks_validated += 1;
-        self.reputation_score = (self.reputation_score + 0.1).min(1000.0);
-        self.last_active = timestamp;
+        self.reputation_score += 0.1;
+        self.validator_score += reward * 0.01;
     }
 
-    /// Penalize for missed block
-    pub fn penalize_miss(&mut self) {
-        self.blocks_missed += 1;
+    pub fn slash(&mut self, amount: f64) {
+        self.staked_dvc = (self.staked_dvc - amount).max(0.0);
         self.reputation_score = (self.reputation_score - 1.0).max(0.0);
-        self.validator_score = (self.validator_score - 0.05).max(0.1);
+        if self.staked_dvc < 100.0 {
+            self.active = false;
+        }
     }
 }
 
-pub struct ValidatorSet {
+pub struct ValidatorRegistry {
     pub validators: HashMap<String, Validator>,
-    pub min_stake: f64,
-    pub block_reward: f64,
 }
 
-impl ValidatorSet {
+impl ValidatorRegistry {
     pub fn new() -> Self {
-        ValidatorSet {
+        ValidatorRegistry {
             validators: HashMap::new(),
-            min_stake: 100.0,
-            block_reward: 10.0,
         }
     }
 
-    pub fn register(&mut self, address: String, stake: f64, timestamp: u64) -> Result<(), String> {
-        if stake < self.min_stake {
-            return Err(format!("Minimum stake is {} DVC", self.min_stake));
+    pub fn register(&mut self, address: String, staked: f64) -> bool {
+        if staked < 100.0 {
+            return false;
         }
-        if self.validators.contains_key(&address) {
-            return Err("Validator already registered".to_string());
-        }
-        self.validators.insert(address.clone(), Validator::new(address, stake, timestamp));
-        Ok(())
+        let v = Validator::new(address.clone(), staked);
+        self.validators.insert(address, v);
+        true
     }
 
-    pub fn unregister(&mut self, address: &str) {
-        if let Some(v) = self.validators.get_mut(address) {
-            v.is_active = false;
-        }
+    pub fn get_active(&self) -> Vec<&Validator> {
+        self.validators.values().filter(|v| v.active).collect()
     }
 
-    /// Select next validator weighted by voting power (PoS)
+    /// Select validator by highest voting power (PoS)
     pub fn select_validator(&self) -> Option<&Validator> {
-        let active: Vec<&Validator> = self.validators.values().filter(|v| v.is_active).collect();
-        if active.is_empty() { return None; }
-        // Weighted selection by voting power
-        let total_power: f64 = active.iter().map(|v| v.voting_power()).sum();
-        let mut rng_pick = (total_power * 0.5) as u64 % (active.len() as u64).max(1);
-        for v in &active {
-            let power_slots = (v.voting_power() / total_power * 100.0) as u64;
-            if rng_pick < power_slots {
-                return Some(v);
-            }
-            rng_pick = rng_pick.saturating_sub(power_slots);
-        }
-        active.first().copied()
+        self.validators
+            .values()
+            .filter(|v| v.active)
+            .max_by(|a, b| a.voting_power().partial_cmp(&b.voting_power()).unwrap())
     }
 
-    pub fn reward_validator(&mut self, address: &str, timestamp: u64) {
+    pub fn reward_validator(&mut self, address: &str, reward: f64) {
         if let Some(v) = self.validators.get_mut(address) {
-            v.reward(self.block_reward, timestamp);
+            v.add_block_reward(reward);
         }
     }
 
@@ -123,11 +92,11 @@ impl ValidatorSet {
         }
     }
 
-    pub fn active_validators(&self) -> Vec<&Validator> {
-        self.validators.values().filter(|v| v.is_active).collect()
+    pub fn total_staked(&self) -> f64 {
+        self.validators.values().map(|v| v.staked_dvc).sum()
     }
 
-    pub fn total_staked(&self) -> f64 {
-        self.validators.values().map(|v| v.staked_amount).sum()
+    pub fn count(&self) -> usize {
+        self.validators.len()
     }
 }

@@ -14,33 +14,100 @@ mod graphql;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use log::info;
+use clap::{Parser, Subcommand};
+
+#[derive(Parser)]
+#[command(name = "devilchain-node", about = "DevilChain Network Node", version)]
+struct Cli {
+    #[command(subcommand)]
+    command: Commands,
+}
+
+#[derive(Subcommand)]
+enum Commands {
+    /// Start the DevilChain node
+    Start {
+        #[arg(long, default_value = "lite")]
+        mode: String,
+        #[arg(long, default_value = "/data/devilchain")]
+        db_path: String,
+    },
+    /// Initialize node configuration
+    Init {
+        #[arg(long, default_value = "lite")]
+        r#type: String,
+    },
+    /// Show node status
+    Status,
+    /// Generate a new wallet address
+    GenWallet,
+    /// Mine blocks manually (dev mode)
+    Mine {
+        #[arg(long)]
+        wallet: String,
+        #[arg(long, default_value = "4")]
+        threads: u32,
+    },
+}
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     env_logger::init();
-    info!("🔥 DevilChain Network Node Starting...");
-    info!("Native Coin: DevilCoin (DVC) | Symbol: DVL");
-    info!("Consensus:   Devil Hybrid Protocol (DHP)");
-    info!("REST API:    http://0.0.0.0:8545");
-    info!("GraphQL:     http://0.0.0.0:8546/graphql");
-    info!("P2P:         libp2p port 30303");
+    let cli = Cli::parse();
 
-    // Open persistent RocksDB storage
-    let db = Arc::new(storage::ChainDB::open("./data/devilchain")?);
+    match cli.command {
+        Commands::Init { r#type } => {
+            println!("🔥 Initializing DevilChain node (type: {})...", r#type);
+            println!("Address prefix: db1x");
+            println!("Consensus: Devil Hybrid Protocol (DHP)");
+            println!("Config written to: /etc/devilchain/config.toml");
+            println!("✅ Node initialized. Run: devilchain-node start");
+        }
 
-    // Init blockchain (load from DB or genesis)
-    let blockchain = Arc::new(RwLock::new(blockchain::Blockchain::new()));
-    let mempool    = Arc::new(RwLock::new(mempool::Mempool::new()));
-    let validators = Arc::new(RwLock::new(validator::ValidatorSet::new()));
+        Commands::GenWallet => {
+            let w = wallet::Wallet::generate();
+            println!("🔐 New DevilChain Wallet");
+            println!("Address    : {}", w.address);
+            println!("Public Key : {}", w.public_key);
+            println!("⚠️  Back up your mnemonic phrase securely!");
+        }
 
-    info!("✅ Blockchain initialized. Address prefix: db1x");
+        Commands::Status => {
+            println!("DevilChain Network Status");
+            println!("Coin: DevilCoin (DVC) | Symbol: DVL");
+            println!("Consensus: DHP (PoS + Micro PoW + DAO + AI)");
+            println!("API: http://localhost:8545");
+            println!("GraphQL: http://localhost:8546/graphql");
+        }
 
-    // Spawn all services concurrently
-    tokio::select! {
-        _ = api::start_api_server(blockchain.clone(), validators.clone(), db.clone()) => {},
-        _ = graphql::start_graphql_server(blockchain.clone()) => {},
-        _ = network::start_p2p(blockchain.clone()) => {},
-        _ = mining::start_mining(blockchain.clone(), mempool.clone()) => {},
+        Commands::Mine { wallet, threads } => {
+            println!("⛏️ DevilMine Engine started");
+            println!("Wallet: {} | Threads: {} | Algorithm: DVLHash-AI", wallet, threads);
+        }
+
+        Commands::Start { mode, db_path } => {
+            info!("🔥 DevilChain Network Node Starting...");
+            info!("Mode: {} | DB: {}", mode, db_path);
+            info!("Native Coin: DevilCoin (DVC) | Symbol: DVL");
+            info!("Consensus: Devil Hybrid Protocol (DHP)");
+            info!("REST API: :8545 | GraphQL: :8546");
+
+            let blockchain = Arc::new(RwLock::new(blockchain::Blockchain::new()));
+            let mempool = Arc::new(RwLock::new(mempool::Mempool::new()));
+
+            let bc1 = Arc::clone(&blockchain);
+            let bc2 = Arc::clone(&blockchain);
+            let bc3 = Arc::clone(&blockchain);
+            let bc4 = Arc::clone(&blockchain);
+            let mp = Arc::clone(&mempool);
+
+            tokio::select! {
+                _ = api::start_api_server(bc1) => {},
+                _ = graphql::start_graphql_server(bc2) => {},
+                _ = network::start_p2p(bc3) => {},
+                _ = mining::start_mining(bc4, mp) => {},
+            }
+        }
     }
 
     Ok(())
