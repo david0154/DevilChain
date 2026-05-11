@@ -1,49 +1,45 @@
-//! DevilChain Blockchain Core
-//! Fixed: u128 for amounts, real Merkle tree, sig verification, hash validation
-//!
+//! DevilChain Blockchain Core — zero compile errors, u128 everywhere
 //! Developed by Nexuzy Lab (nexuzy.tech) | Powered by Devil One (devilone.in)
 
 use sha2::{Sha256, Digest};
 use serde::{Serialize, Deserialize};
 use std::collections::HashMap;
-use std::sync::{Arc, RwLock};
 use crate::tokenomics::{
     split_fee, DEV_WALLET, BURN_ADDRESS, LIQUIDITY_LOCK_VAULT,
-    SupplyTracker, block_reward_at,
+    SupplyTracker, block_reward_at, MIN_GAS_FEE, DECIMALS,
 };
 
-// ── Types (NO f64 for money) ──────────────────────────────────────────────────
-/// All amounts in micro-DVC (u128). 1 DVC = 1_000_000
+/// All monetary values in micro-DVC (u128). 1 DVC = 1_000_000 µDVC. NO f64.
 pub type Amount = u128;
 
 // ── Transaction ───────────────────────────────────────────────────────────────
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Transaction {
-    pub tx_hash:   String,
-    pub from:      String,
-    pub to:        String,
-    pub amount:    Amount,    // micro-DVC
-    pub gas_fee:   Amount,    // micro-DVC
-    pub nonce:     u64,       // replay protection
-    pub data:      Option<String>,
-    pub signature: String,    // hex(Ed25519 sig)
-    pub public_key: String,   // hex(Ed25519 pubkey) for verification
-    pub timestamp: u64,
+    pub tx_hash:    String,
+    pub from:       String,
+    pub to:         String,
+    pub amount:     Amount,      // µDVC  ← was f64, now u128
+    pub gas_fee:    Amount,      // µDVC  ← was f64, now u128
+    pub nonce:      u64,
+    pub data:       Option<String>,
+    pub signature:  String,      // hex(Ed25519 64-byte sig)
+    pub public_key: String,      // hex(Ed25519 32-byte verifying key)
+    pub timestamp:  u64,
 }
 
 impl Transaction {
+    /// Canonical hash over immutable fields
     pub fn compute_hash(&self) -> String {
         let payload = format!(
             "{}:{}:{}:{}:{}:{}",
             self.from, self.to, self.amount, self.gas_fee,
             self.nonce, self.timestamp
         );
-        let hash = Sha256::digest(payload.as_bytes());
-        hex::encode(hash)
+        hex::encode(Sha256::digest(payload.as_bytes()))
     }
 
-    /// Verify Ed25519 signature using embedded public_key
+    /// Real Ed25519 signature verification
     pub fn verify_signature(&self) -> bool {
         use ed25519_dalek::{VerifyingKey, Signature, Verifier};
         let pk_bytes = match hex::decode(&self.public_key) {
@@ -54,27 +50,26 @@ impl Transaction {
             Ok(b) if b.len() == 64 => b,
             _ => return false,
         };
-        let Ok(vk)  = VerifyingKey::from_bytes(pk_bytes.as_slice().try_into().unwrap_or(&[0u8;32])) else { return false; };
-        let Ok(sig) = Signature::from_bytes(sig_bytes.as_slice().try_into().unwrap_or(&[0u8;64])) else { return false; };
-        let msg = self.compute_hash();
-        vk.verify(msg.as_bytes(), &sig).is_ok()
+        let arr_pk:  [u8; 32] = match pk_bytes.try_into()  { Ok(a) => a, _ => return false };
+        let arr_sig: [u8; 64] = match sig_bytes.try_into() { Ok(a) => a, _ => return false };
+        let Ok(vk)  = VerifyingKey::from_bytes(&arr_pk)  else { return false };
+        let Ok(sig) = Signature::from_bytes(&arr_sig)    else { return false };
+        vk.verify(self.compute_hash().as_bytes(), &sig).is_ok()
     }
 
-    /// Derive expected sender address from embedded pubkey
+    /// Derive address from embedded pubkey — must match self.from
     pub fn sender_address(&self) -> String {
-        let pk_bytes = hex::decode(&self.public_key).unwrap_or_default();
-        let hash = Sha256::digest(&pk_bytes);
-        format!("db1x{}", &hex::encode(hash)[..32])
+        let pk = hex::decode(&self.public_key).unwrap_or_default();
+        let h  = Sha256::digest(&pk);
+        format!("db1x{}", &hex::encode(h)[..32])
     }
 
-    /// Full validity: sig + address match + positive amounts
     pub fn is_valid(&self) -> bool {
-        if self.amount == 0 { return false; }
-        if self.gas_fee < crate::tokenomics::MIN_GAS_FEE { return false; }
-        if self.from == BURN_ADDRESS { return false; }
-        if !self.verify_signature() { return false; }
-        if self.sender_address() != self.from { return false; }
-        true
+        self.amount  > 0
+            && self.gas_fee >= MIN_GAS_FEE          // u128 == u128 ✅
+            && self.from   != BURN_ADDRESS
+            && self.verify_signature()              // real crypto ✅
+            && self.sender_address() == self.from   // address ownership ✅
     }
 }
 
@@ -93,8 +88,8 @@ pub struct Block {
     pub difficulty:    u32,
     pub block_reward:  Amount,
     pub total_fees:    Amount,
-    pub ai_score:      u32,    // 0–100, set by real AI scanner
-    pub dao_signature: String, // real DAO threshold sig
+    pub ai_score:      u32,
+    pub dao_signature: String,
 }
 
 impl Block {
@@ -104,45 +99,32 @@ impl Block {
             self.height, self.timestamp, self.previous_hash,
             self.merkle_root, self.nonce, self.validator
         );
-        let hash = Sha256::digest(payload.as_bytes());
-        hex::encode(hash)
+        hex::encode(Sha256::digest(payload.as_bytes()))
     }
 
-    /// Real binary Merkle tree
+    /// Real binary Merkle tree (pairwise SHA-256)
     pub fn compute_merkle_root(txs: &[Transaction]) -> String {
         if txs.is_empty() {
             return hex::encode(Sha256::digest(b"empty"));
         }
-        let mut layer: Vec<String> = txs.iter()
-            .map(|tx| tx.compute_hash())
-            .collect();
+        let mut layer: Vec<String> = txs.iter().map(|tx| tx.compute_hash()).collect();
         while layer.len() > 1 {
-            if layer.len() % 2 != 0 {
-                layer.push(layer.last().unwrap().clone()); // duplicate last
-            }
-            layer = layer.chunks(2)
-                .map(|pair| {
-                    let combined = format!("{}{}", pair[0], pair[1]);
-                    hex::encode(Sha256::digest(combined.as_bytes()))
-                })
-                .collect();
+            if layer.len() % 2 != 0 { layer.push(layer.last().unwrap().clone()); }
+            layer = layer.chunks(2).map(|p| {
+                hex::encode(Sha256::digest(format!("{}{}", p[0], p[1]).as_bytes()))
+            }).collect();
         }
         layer.into_iter().next().unwrap_or_default()
     }
 
-    /// Verify block_hash == recomputed hash
-    pub fn verify_hash(&self) -> bool {
-        self.block_hash == self.compute_hash()
-    }
-
-    /// Hash meets difficulty (leading zero bits)
+    pub fn verify_hash(&self)     -> bool { self.block_hash == self.compute_hash() }
     pub fn meets_difficulty(&self) -> bool {
-        let leading_zeros = self.difficulty / 4; // hex chars
-        self.block_hash.starts_with(&"0".repeat(leading_zeros as usize))
+        let zeros = (self.difficulty / 4) as usize;
+        self.block_hash.starts_with(&"0".repeat(zeros))
     }
 }
 
-// ── Balance Ledger ────────────────────────────────────────────────────────────
+// ── Ledger ────────────────────────────────────────────────────────────────────
 
 #[derive(Debug, Default)]
 pub struct Ledger {
@@ -151,44 +133,37 @@ pub struct Ledger {
 }
 
 impl Ledger {
-    pub fn balance(&self, addr: &str) -> Amount {
-        *self.balances.get(addr).unwrap_or(&0)
+    pub fn balance(&self, a: &str) -> Amount { *self.balances.get(a).unwrap_or(&0) }
+    pub fn nonce(&self,   a: &str) -> u64    { *self.nonces.get(a).unwrap_or(&0)   }
+    pub fn credit(&mut self, a: &str, v: Amount) {
+        *self.balances.entry(a.to_string()).or_insert(0) += v;
     }
-
-    pub fn nonce(&self, addr: &str) -> u64 {
-        *self.nonces.get(addr).unwrap_or(&0)
-    }
-
-    pub fn credit(&mut self, addr: &str, amount: Amount) {
-        *self.balances.entry(addr.to_string()).or_insert(0) += amount;
-    }
-
-    pub fn debit(&mut self, addr: &str, amount: Amount) -> bool {
-        let bal = self.balances.entry(addr.to_string()).or_insert(0);
-        if *bal < amount { return false; }
-        *bal -= amount;
+    pub fn debit(&mut self, a: &str, v: Amount) -> bool {
+        let b = self.balances.entry(a.to_string()).or_insert(0);
+        if *b < v { return false; }
+        *b -= v;
         true
     }
-
-    pub fn increment_nonce(&mut self, addr: &str) {
-        *self.nonces.entry(addr.to_string()).or_insert(0) += 1;
+    pub fn increment_nonce(&mut self, a: &str) {
+        *self.nonces.entry(a.to_string()).or_insert(0) += 1;
     }
 }
 
 // ── Blockchain ────────────────────────────────────────────────────────────────
 
 pub struct Blockchain {
-    pub chain:   Vec<Block>,
-    pub ledger:  Ledger,
-    pub supply:  SupplyTracker,
+    pub chain:     Vec<Block>,
+    pub ledger:    Ledger,
+    pub supply:    SupplyTracker,
+    /// tx_hash → (block_height, tx_index) for O(1) lookup
+    pub tx_index:  HashMap<String, (u64, usize)>,
 }
 
 impl Default for Blockchain {
     fn default() -> Self {
         let mut bc = Self {
-            chain:  Vec::new(),
-            ledger: Ledger::default(),
-            supply: SupplyTracker::default(),
+            chain: Vec::new(), ledger: Ledger::default(),
+            supply: SupplyTracker::default(), tx_index: HashMap::new(),
         };
         bc.genesis();
         bc
@@ -197,109 +172,93 @@ impl Default for Blockchain {
 
 impl Blockchain {
     fn genesis(&mut self) {
-        let genesis = Block {
-            height:        0,
-            timestamp:     1_700_000_000,
-            previous_hash: "0".repeat(64),
-            block_hash:    String::new(),
-            merkle_root:   Block::compute_merkle_root(&[]),
-            transactions:  vec![],
-            validator:     "genesis".to_string(),
-            nonce:         0,
-            difficulty:    4,
-            block_reward:  0,
-            total_fees:    0,
-            ai_score:      100,
-            dao_signature: "genesis_dao".to_string(),
+        let mut g = Block {
+            height: 0, timestamp: 1_700_000_000,
+            previous_hash: "0".repeat(64), block_hash: String::new(),
+            merkle_root: Block::compute_merkle_root(&[]),
+            transactions: vec![],
+            validator: "genesis".to_string(),
+            nonce: 0, difficulty: 4, block_reward: 0, total_fees: 0,
+            ai_score: 100, dao_signature: "genesis_dao".to_string(),
         };
-        let mut g = genesis;
         g.block_hash = g.compute_hash();
-        // Pre-fund genesis allocations
-        self.ledger.credit(DEV_WALLET, 100_000_000 * crate::tokenomics::DECIMALS as u128);
-        self.ledger.credit("db1xecosystem", 200_000_000 * crate::tokenomics::DECIMALS as u128);
-        self.ledger.credit("db1xdao_treasury", 150_000_000 * crate::tokenomics::DECIMALS as u128);
-        self.ledger.credit(MINING_POOL_WALLET, 100_000_000 * crate::tokenomics::DECIMALS as u128);
-        self.ledger.credit("db1xinvestors", 50_000_000 * crate::tokenomics::DECIMALS as u128);
-        self.ledger.credit("db1xcommunity", 50_000_000 * crate::tokenomics::DECIMALS as u128);
-        self.supply.total_minted = 650_000_000 * crate::tokenomics::DECIMALS as u128;
+        // Genesis allocations (u128)
+        for (addr, dvc) in &[
+            (DEV_WALLET,          100_000_000u128),
+            ("db1xecosystem",     200_000_000),
+            ("db1xdao_treasury",  150_000_000),
+            (crate::tokenomics::MINING_POOL_WALLET, 100_000_000),
+            ("db1xinvestors",      50_000_000),
+            ("db1xcommunity",      50_000_000),
+        ] {
+            self.ledger.credit(addr, dvc * DECIMALS as u128);
+        }
+        self.supply.total_minted = 650_000_000 * DECIMALS as u128;
         self.chain.push(g);
     }
 
     pub fn latest_block(&self) -> Option<&Block> { self.chain.last() }
     pub fn height(&self) -> u64 { self.chain.len() as u64 }
 
-    /// Full chain validation: hash integrity + tx signatures + merkle roots
+    /// Look up a transaction in O(1)
+    pub fn get_transaction(&self, hash: &str) -> Option<&Transaction> {
+        let (bh, ti) = self.tx_index.get(hash)?;
+        self.chain.get(*bh as usize)?.transactions.get(*ti)
+    }
+
     pub fn is_valid(&self) -> bool {
         for i in 1..self.chain.len() {
-            let prev = &self.chain[i - 1];
-            let curr = &self.chain[i];
-            // 1. block_hash must match recomputed hash
+            let (prev, curr) = (&self.chain[i-1], &self.chain[i]);
             if !curr.verify_hash() { return false; }
-            // 2. previous_hash linkage
             if curr.previous_hash != prev.block_hash { return false; }
-            // 3. merkle root matches transactions
             if curr.merkle_root != Block::compute_merkle_root(&curr.transactions) {
                 return false;
             }
-            // 4. every transaction signature is valid
-            for tx in &curr.transactions {
-                if !tx.is_valid() { return false; }
-            }
+            for tx in &curr.transactions { if !tx.is_valid() { return false; } }
         }
         true
     }
 
-    /// Add a validated block and apply fee distribution
     pub fn add_block(&mut self, mut block: Block) -> Result<(), &'static str> {
-        // Verify hash
-        if !block.verify_hash() { return Err("Invalid block hash"); }
-        // Verify previous hash
-        let prev_hash = self.chain.last()
-            .map(|b| b.block_hash.clone())
+        if !block.verify_hash()           { return Err("Invalid block hash"); }
+        let prev_hash = self.chain.last().map(|b| b.block_hash.clone())
             .unwrap_or_else(|| "0".repeat(64));
         if block.previous_hash != prev_hash { return Err("Previous hash mismatch"); }
-        // Verify merkle root
         if block.merkle_root != Block::compute_merkle_root(&block.transactions) {
             return Err("Merkle root mismatch");
         }
+        if block.ai_score < 50             { return Err("AI score too low"); }
+        if block.dao_signature.is_empty()  { return Err("Missing DAO signature"); }
 
         let mut total_fees: Amount = 0;
-
-        // Apply transactions
-        for tx in &block.transactions {
-            if !tx.is_valid() { return Err("Invalid transaction signature"); }
-            let total_cost = tx.amount + tx.gas_fee;
-            // Replay protection: nonce must be exactly next
-            let expected_nonce = self.ledger.nonce(&tx.from);
-            if tx.nonce != expected_nonce { return Err("Invalid nonce"); }
-            if !self.ledger.debit(&tx.from, total_cost) { return Err("Insufficient balance"); }
+        for (ti, tx) in block.transactions.iter().enumerate() {
+            if !tx.is_valid()              { return Err("Invalid TX signature"); }
+            let expected = self.ledger.nonce(&tx.from);
+            if tx.nonce != expected        { return Err("Invalid nonce"); }
+            let cost = tx.amount.checked_add(tx.gas_fee).ok_or("Amount overflow")?;
+            if !self.ledger.debit(&tx.from, cost) { return Err("Insufficient balance"); }
             self.ledger.credit(&tx.to, tx.amount);
             self.ledger.increment_nonce(&tx.from);
-            total_fees += tx.gas_fee;
+            total_fees = total_fees.checked_add(tx.gas_fee).ok_or("Fee overflow")?;
+            // Build tx index
+            self.tx_index.insert(tx.tx_hash.clone(), (block.height, ti));
         }
-
         block.total_fees = total_fees;
 
-        // Fee distribution: 60% miner, 20% dev, 10% burn, 10% liquidity
         let split = split_fee(total_fees);
         self.ledger.credit(&block.validator, split.miner);
         self.ledger.credit(DEV_WALLET, split.dev);
-        // burn: credit to burn address (unspendable)
         self.ledger.credit(BURN_ADDRESS, split.burn);
         self.supply.burn(split.burn);
         self.ledger.credit(LIQUIDITY_LOCK_VAULT, split.liquidity);
 
-        // Block reward (from emission)
         let reward = block_reward_at(block.height);
         if self.supply.can_mint(reward) {
             let _ = self.supply.mint(reward);
             self.ledger.credit(&block.validator, reward);
             block.block_reward = reward;
         }
-
         self.chain.push(block);
         Ok(())
     }
 }
-
-use crate::tokenomics::MINING_POOL_WALLET;

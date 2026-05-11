@@ -1,16 +1,14 @@
-//! DevilChain Node Entry Point
-//! Fixed: tokio::join! with supervised tasks (not select!)
-//!
+//! DevilChain Node — supervised tasks, correct API signature
 //! Developed by Nexuzy Lab (nexuzy.tech) | Powered by Devil One (devilone.in)
 
 use std::sync::{Arc, RwLock};
 use tokio::signal;
+
 mod blockchain;
 mod consensus;
 mod wallet;
 mod tokenomics;
 mod mempool;
-mod validator;
 mod mining;
 mod network;
 mod api;
@@ -20,78 +18,100 @@ mod dao;
 mod ai;
 
 use blockchain::Blockchain;
-use consensus::DHPConsensus;
+use consensus::{DHPConsensus, ValidatorRegistry};
 use mempool::Mempool;
+use dao::DaoGovernance;
 
 #[tokio::main]
 async fn main() {
-    // Logging
-    std::env::set_var("RUST_LOG", std::env::var("RUST_LOG").unwrap_or_else(|_| "warn".into()));
+    std::env::set_var("RUST_LOG",
+        std::env::var("RUST_LOG").unwrap_or_else(|_| "warn".into()));
     env_logger::init();
 
     println!("  ╔══════════════════════════════════════╗");
     println!("  ║   DevilChain Network — Testnet 2026  ║");
-    println!("  ║   nexuzy.tech | devilone.in          ║");
+    println!("  ║   nexuzy.tech  |  devilone.in        ║");
     println!("  ╚══════════════════════════════════════╝\n");
 
-    // Shared state
+    // Shared state — all Arc<RwLock<_>>
     let blockchain = Arc::new(RwLock::new(Blockchain::default()));
-    let mempool    = Arc::new(RwLock::new(Mempool::default()));
+    let mempool    = Arc::new(RwLock::new(Mempool::new(500)));
     let consensus  = Arc::new(RwLock::new(DHPConsensus::default()));
+    let validators = Arc::new(RwLock::new(ValidatorRegistry::default()));
+    let dao        = Arc::new(RwLock::new(DaoGovernance::default()));
 
-    let bc1 = Arc::clone(&blockchain);
-    let bc2 = Arc::clone(&blockchain);
-    let bc3 = Arc::clone(&blockchain);
-    let bc4 = Arc::clone(&blockchain);
-    let mp1 = Arc::clone(&mempool);
-    let mp2 = Arc::clone(&mempool);
-    let cs1 = Arc::clone(&consensus);
-
-    // ✅ Supervised tasks — each restarts on panic, all run independently
-    let api_task = tokio::spawn(async move {
-        loop {
-            if let Err(e) = api::start_api_server(Arc::clone(&bc1),
-                                                   Arc::clone(&mp1)).await {
-                log::error!("API server error: {} — restarting in 2s", e);
+    // ✅ Supervised tasks — each restarts independently on error
+    let api_task = {
+        let (bc, mp, vr, dg) = (
+            Arc::clone(&blockchain), Arc::clone(&mempool),
+            Arc::clone(&validators), Arc::clone(&dao),
+        );
+        tokio::spawn(async move {
+            loop {
+                // ✅ Correct 4-arg signature
+                match api::start_api_server(
+                    Arc::clone(&bc), Arc::clone(&mp),
+                    Arc::clone(&vr), Arc::clone(&dg),
+                ).await {
+                    Ok(()) => {}
+                    Err(e) => log::error!("API error: {} — restarting in 2s", e),
+                }
+                tokio::time::sleep(std::time::Duration::from_secs(2)).await;
             }
-            tokio::time::sleep(std::time::Duration::from_secs(2)).await;
-        }
-    });
+        })
+    };
 
-    let graphql_task = tokio::spawn(async move {
-        loop {
-            if let Err(e) = graphql::start_graphql_server(Arc::clone(&bc2)).await {
-                log::error!("GraphQL error: {} — restarting in 2s", e);
+    let gql_task = {
+        let bc = Arc::clone(&blockchain);
+        tokio::spawn(async move {
+            loop {
+                match graphql::start_graphql_server(Arc::clone(&bc)).await {
+                    Ok(()) => {}
+                    Err(e) => log::error!("GraphQL error: {} — restarting in 2s", e),
+                }
+                tokio::time::sleep(std::time::Duration::from_secs(2)).await;
             }
-            tokio::time::sleep(std::time::Duration::from_secs(2)).await;
-        }
-    });
+        })
+    };
 
-    let network_task = tokio::spawn(async move {
-        loop {
-            if let Err(e) = network::start_p2p(Arc::clone(&bc3)).await {
-                log::error!("P2P error: {} — restarting in 5s", e);
+    let net_task = {
+        let bc = Arc::clone(&blockchain);
+        tokio::spawn(async move {
+            loop {
+                match network::start_p2p(Arc::clone(&bc)).await {
+                    Ok(()) => {}
+                    Err(e) => log::error!("P2P error: {} — restarting in 5s", e),
+                }
+                tokio::time::sleep(std::time::Duration::from_secs(5)).await;
             }
-            tokio::time::sleep(std::time::Duration::from_secs(5)).await;
-        }
-    });
+        })
+    };
 
-    let mining_task = tokio::spawn(async move {
-        loop {
-            if let Err(e) = mining::start_mining(
-                Arc::clone(&bc4), Arc::clone(&mp2), Arc::clone(&cs1)
-            ).await {
-                log::error!("Mining error: {} — restarting in 3s", e);
+    let mine_task = {
+        let (bc, mp, cs, dg) = (
+            Arc::clone(&blockchain), Arc::clone(&mempool),
+            Arc::clone(&consensus),  Arc::clone(&dao),
+        );
+        tokio::spawn(async move {
+            loop {
+                match mining::start_mining(
+                    Arc::clone(&bc), Arc::clone(&mp),
+                    Arc::clone(&cs), Arc::clone(&dg),
+                ).await {
+                    Ok(()) => {}
+                    Err(e) => log::error!("Mining error: {} — restarting in 3s", e),
+                }
+                tokio::time::sleep(std::time::Duration::from_secs(3)).await;
             }
-            tokio::time::sleep(std::time::Duration::from_secs(3)).await;
-        }
-    });
+        })
+    };
 
-    // ✅ Wait for Ctrl+C, then graceful shutdown
+    println!("  ✅ All services started");
+    println!("  REST  → http://0.0.0.0:8545");
+    println!("  GQL   → http://0.0.0.0:8546/graphql");
+
     signal::ctrl_c().await.expect("Failed to listen for Ctrl+C");
-    println!("\nShutting down DevilChain node...");
-    api_task.abort();
-    graphql_task.abort();
-    network_task.abort();
-    mining_task.abort();
+    println!("\nShutting down...");
+    api_task.abort(); gql_task.abort();
+    net_task.abort(); mine_task.abort();
 }

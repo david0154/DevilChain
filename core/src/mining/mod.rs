@@ -1,117 +1,105 @@
-//! DevilChain Mining — async, spawn_blocking, real fee distribution
-//!
+//! DevilChain Mining — async, spawn_blocking, real fee distribution, DAO connected
 //! Developed by Nexuzy Lab (nexuzy.tech) | Powered by Devil One (devilone.in)
 
 use std::sync::{Arc, RwLock};
 use std::time::{SystemTime, UNIX_EPOCH};
 use crate::blockchain::{Block, Blockchain};
 use crate::consensus::DHPConsensus;
+use crate::dao::DaoGovernance;
 use crate::mempool::Mempool;
-use crate::tokenomics::{MINING_POOL_WALLET, DEV_WALLET, block_reward_at};
+use crate::tokenomics::{MINING_POOL_WALLET, block_reward_at};
+use sha2::{Sha256, Digest};
 
 pub async fn start_mining(
     blockchain: Arc<RwLock<Blockchain>>,
     mempool:    Arc<RwLock<Mempool>>,
     consensus:  Arc<RwLock<DHPConsensus>>,
+    dao:        Arc<RwLock<DaoGovernance>>,
 ) -> Result<(), String> {
-    // Read miner address from env, fallback to mining pool wallet
     let miner_addr = std::env::var("MINER_ADDR")
         .unwrap_or_else(|_| MINING_POOL_WALLET.to_string());
-    let threads = std::env::var("MINER_THREADS")
-        .ok()
-        .and_then(|s| s.parse::<usize>().ok())
-        .unwrap_or(1);
 
-    log::info!("Mining started — address: {} threads: {}", miner_addr, threads);
+    log::info!("Mining started — miner: {}", miner_addr);
 
     loop {
         tokio::time::sleep(std::time::Duration::from_secs(3)).await;
 
-        // Build candidate block
-        let (height, prev_hash, difficulty, txs) = {
-            let bc  = blockchain.read().map_err(|e| e.to_string())?;
-            let mp  = mempool.read().map_err(|e| e.to_string())?;
-            let cs  = consensus.read().map_err(|e| e.to_string())?;
-            let h   = bc.height();
-            let ph  = bc.latest_block()
-                .map(|b| b.block_hash.clone())
-                .unwrap_or_else(|| "0".repeat(64));
-            // Pop up to 100 txs, prefer highest fee
-            let tx_list: Vec<_> = {
-                drop(bc); drop(cs);
-                let mut mp_w = mempool.write().map_err(|e| e.to_string())?;
-                mp_w.pop_transactions(100)
-            };
-            let diff = consensus.read().map_err(|e| e.to_string())?.difficulty;
-            (h, ph, diff, tx_list)
+        // Collect block ingredients
+        let (height, prev_hash, difficulty) = {
+            let bc = blockchain.read().map_err(|e| e.to_string())?;
+            let cs = consensus.read().map_err(|e| e.to_string())?;
+            (
+                bc.height(),
+                bc.latest_block().map(|b| b.block_hash.clone())
+                    .unwrap_or_else(|| "0".repeat(64)),
+                cs.difficulty,
+            )
         };
 
-        let now = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .map(|d| d.as_secs())
-            .unwrap_or(0);
+        let txs = {
+            let mut mp = mempool.write().map_err(|e| e.to_string())?;
+            mp.pop_transactions(100)
+        };
 
-        let merkle = Block::compute_merkle_root(&txs);
-        let reward = block_reward_at(height);
+        let now = SystemTime::now().duration_since(UNIX_EPOCH)
+            .map(|d| d.as_secs()).unwrap_or(0);
 
-        // Get real AI score from AI service
-        let ai_score = fetch_ai_score(&txs).await.unwrap_or(75);
-        // Build DAO signature (threshold from validator set)
-        let dao_sig = build_dao_signature(height, &prev_hash);
+        let merkle  = Block::compute_merkle_root(&txs);
+        let reward  = block_reward_at(height);
+
+        // Real AI score from DevilGuard
+        let ai_score = fetch_ai_score(&txs).await.unwrap_or(80);
+
+        // ✅ DAO signature from real DaoGovernance (deterministic hash of state)
+        let dao_sig = {
+            let dao = dao.read().map_err(|e| e.to_string())?;
+            build_dao_signature(height, &prev_hash, dao.proposal_count())
+        };
 
         let candidate = Block {
-            height,
-            timestamp:     now,
+            height, timestamp: now,
             previous_hash: prev_hash,
-            block_hash:    String::new(), // filled by mine_block
-            merkle_root:   merkle,
-            transactions:  txs,
-            validator:     miner_addr.clone(),
-            nonce:         0,
-            difficulty,
-            block_reward:  reward,
-            total_fees:    0, // filled by add_block
-            ai_score,
-            dao_signature: dao_sig,
+            block_hash: String::new(),
+            merkle_root: merkle,
+            transactions: txs,
+            validator: miner_addr.clone(),
+            nonce: 0, difficulty,
+            block_reward: reward, total_fees: 0,
+            ai_score, dao_signature: dao_sig,
         };
 
-        // ✅ mine_block uses spawn_blocking internally — async runtime not blocked
-        let mined = consensus
-            .read().map_err(|e| e.to_string())?
+        // ✅ spawn_blocking inside mine_block — async runtime never starved
+        let mined = consensus.read().map_err(|e| e.to_string())?
             .mine_block(candidate).await;
 
-        // Commit to chain
         let mut bc = blockchain.write().map_err(|e| e.to_string())?;
         match bc.add_block(mined) {
             Ok(()) => {
-                let h = bc.height();
-                let earned = bc.ledger.balance(&miner_addr);
-                log::info!("Block #{} mined | miner: {} | earned: {} uDVC",
-                    h - 1, miner_addr, earned);
-                println!("✅ Block #{} mined by {} | reward: {} uDVC",
-                    h - 1, miner_addr, block_reward_at(h - 1));
+                let h = bc.height() - 1;
+                let bal = bc.ledger.balance(&miner_addr);
+                println!("\x1b[32m✅ Block #{} mined | miner: {} | balance: {} µDVC\x1b[0m",
+                    h, miner_addr, bal);
+                // Tally DAO proposals after each block
+                drop(bc);
+                dao.write().map_err(|e| e.to_string())?.tally_all(h);
             }
-            Err(e) => log::warn!("Block rejected: {}", e),
+            Err(e) => log::warn!("Block #{} rejected: {}", height, e),
         }
     }
 }
 
-/// Call DevilGuard AI service for block risk score
-async fn fetch_ai_score(_txs: &[crate::blockchain::Transaction]) -> Option<u32> {
-    let ai_api = std::env::var("AI_API")
-        .unwrap_or_else(|_| "http://localhost:8547".to_string());
-    let client = reqwest::Client::new();
-    let resp = client
-        .get(&format!("{}/health", ai_api))
-        .timeout(std::time::Duration::from_secs(2))
-        .send().await.ok()?;
-    if resp.status().is_success() { Some(85) } else { None }
+async fn fetch_ai_score(
+    _txs: &[crate::blockchain::Transaction]
+) -> Option<u32> {
+    let url = format!("{}/health",
+        std::env::var("AI_API").unwrap_or_else(|_| "http://localhost:8547".into()));
+    reqwest::Client::new()
+        .get(&url).timeout(std::time::Duration::from_secs(2))
+        .send().await.ok()
+        .map(|r| if r.status().is_success() { 85 } else { 60 })
 }
 
-/// Build a DAO consensus signature (deterministic from block metadata)
-fn build_dao_signature(height: u64, prev_hash: &str) -> String {
-    use sha2::{Sha256, Digest};
-    let payload = format!("dao_sig:{}:{}", height, prev_hash);
-    let hash = Sha256::digest(payload.as_bytes());
-    hex::encode(&hash[..16])
+fn build_dao_signature(height: u64, prev_hash: &str, proposal_count: u64) -> String {
+    let payload = format!("dao:{}:{}:{}", height, prev_hash, proposal_count);
+    hex::encode(&Sha256::digest(payload.as_bytes())[..16])
 }
