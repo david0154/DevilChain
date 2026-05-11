@@ -1,4 +1,4 @@
-# ![DevilChain](logo.jpg)
+# ![DevilChain](logo.png)
 
 <p align="center">
   <img src="logo.png" alt="DevilChain Network Logo" width="300"/>
