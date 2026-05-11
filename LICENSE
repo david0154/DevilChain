@@ -1,21 +1,97 @@
 MIT License
 
-Copyright (c) 2026 DevilChain Network - David (david0154)
+Copyright (c) 2026 Nexuzy Lab (https://nexuzy.tech) & Devil One (https://devilone.in)
+Lead Developer: David (https://github.com/david0154)
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+Project: DevilChain Network
+Repository: https://github.com/david0154/DevilChain
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+Permission is hereby granted, free of charge, to any person or organization
+obtaining a copy of this software and associated documentation files
+(the "Software"), to deal in the Software without restriction, including
+without limitation the rights to use, copy, modify, merge, publish,
+distribute, sublicense, and/or sell copies of the Software, and to
+permit persons to whom the Software is furnished to do so, subject to
+the following conditions:
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+1. ATTRIBUTION REQUIREMENT
+   The above copyright notice, this permission notice, and the following
+   attribution must be included in all copies or substantial portions
+   of the Software:
+
+   "Developed by Nexuzy Lab (https://nexuzy.tech) | Powered by Devil One
+   (https://devilone.in) | Lead Developer: David (@david0154)"
+
+2. DISCLAIMER OF WARRANTY
+   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+   EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+   MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, TITLE, AND
+   NON-INFRINGEMENT. IN NO EVENT SHALL THE AUTHORS, COPYRIGHT HOLDERS,
+   NEXUZY LAB, OR DEVIL ONE BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER
+   LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
+   ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE
+   OR OTHER DEALINGS IN THE SOFTWARE.
+
+3. LIMITATION OF LIABILITY
+   In no event and under no legal theory, whether in tort (including
+   negligence), contract, or otherwise, unless required by applicable
+   law, shall Nexuzy Lab, Devil One, or any contributor be liable to
+   you for any direct, indirect, special, incidental, or consequential
+   damages of any character arising as a result of this License or out
+   of the use or inability to use the Software.
+
+4. FINANCIAL & INVESTMENT DISCLAIMER
+   DevilCoin (DVC/DVL) and all associated tokens are UTILITY TOKENS
+   for network operations only. This software and its associated tokens
+   do not constitute financial advice, investment advice, or securities
+   of any kind. Past performance does not guarantee future results.
+   Use at your own risk.
+
+5. TESTNET DISCLAIMER
+   All coins, tokens, and balances on DevilChain Testnet have NO REAL
+   MONETARY VALUE. Testnet is for testing and development purposes only.
+
+6. OPEN SOURCE COMMITMENT
+   Nexuzy Lab and Devil One are committed to keeping DevilChain core
+   infrastructure open-source under this license in perpetuity.
+
+-------------------------------------------------------------------------------
+
+THIRD-PARTY LICENSES
+
+This software incorporates components from the following open-source projects:
+
+- Rust & Cargo ecosystem (MIT / Apache 2.0)
+  https://www.rust-lang.org
+
+- RocksDB (Apache 2.0)
+  https://github.com/facebook/rocksdb
+
+- libp2p (MIT / Apache 2.0)
+  https://libp2p.io
+
+- Next.js (MIT)
+  https://nextjs.org
+
+- Hardhat & OpenZeppelin Contracts (MIT)
+  https://hardhat.org | https://openzeppelin.com
+
+- FastAPI (MIT)
+  https://fastapi.tiangolo.com
+
+- ONNX Runtime (MIT)
+  https://onnxruntime.ai
+
+- Flutter (BSD 3-Clause)
+  https://flutter.dev
+
+- Tailwind CSS (MIT)
+  https://tailwindcss.com
+
+-------------------------------------------------------------------------------
+
+                    DevilChain Network — MIT License 2026
+          Nexuzy Lab | nexuzy.tech    •    Devil One | devilone.in
+          Lead Developer: David | github.com/david0154
+
+-------------------------------------------------------------------------------

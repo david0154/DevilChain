@@ -1,20 +1,66 @@
 # ![DevilChain](logo.png)
 
 <p align="center">
-  <img src="logo.png" alt="DevilChain Network Logo" width="300"/>
+  <img src="logo.png" alt="DevilChain Network Logo" width="280"/>
 </p>
 
 <h1 align="center">DevilChain Network</h1>
+
 <p align="center">
   <b>Lightweight Hybrid AI-Powered DAO Blockchain Ecosystem</b><br/>
-  Native Coin: <b>DevilCoin (DVC)</b> | Symbol: <b>DVL</b>
+  Native Coin: <b>DevilCoin (DVC)</b> &nbsp;|&nbsp; Symbol: <b>DVL</b>
 </p>
 
 <p align="center">
   <img src="https://img.shields.io/badge/Language-Rust-orange?style=for-the-badge&logo=rust" />
   <img src="https://img.shields.io/badge/Smart_Contracts-Solidity%20%2B%20WASM-blue?style=for-the-badge" />
   <img src="https://img.shields.io/badge/Consensus-Devil_Hybrid_Protocol-red?style=for-the-badge" />
+  <img src="https://img.shields.io/badge/AI-DevilGuard-purple?style=for-the-badge" />
   <img src="https://img.shields.io/badge/License-MIT-green?style=for-the-badge" />
+  <img src="https://img.shields.io/badge/Status-Testnet-yellow?style=for-the-badge" />
+</p>
+
+<p align="center">
+  <a href="https://nexuzy.tech" target="_blank">
+    <img src="https://img.shields.io/badge/Developed%20by-Nexuzy%20Lab-CC0000?style=for-the-badge&logo=github" />
+  </a>
+  <a href="https://devilone.in" target="_blank">
+    <img src="https://img.shields.io/badge/Powered%20by-Devil%20One-000000?style=for-the-badge" />
+  </a>
+</p>
+
+---
+
+## 👨‍💻 Developer & Credits
+
+<table align="center">
+  <tr>
+    <td align="center" width="50%">
+      <h3>🏢 Developed by</h3>
+      <a href="https://nexuzy.tech" target="_blank">
+        <img src="https://img.shields.io/badge/Nexuzy%20Lab-nexuzy.tech-CC0000?style=for-the-badge" />
+      </a>
+      <br/><br/>
+      <b>Nexuzy Lab</b> — the innovation lab behind DevilChain.<br/>
+      Building next-generation Web3, AI, and blockchain infrastructure.<br/><br/>
+      <a href="https://nexuzy.tech">🌐 nexuzy.tech</a>
+    </td>
+    <td align="center" width="50%">
+      <h3>⚡ Powered by</h3>
+      <a href="https://devilone.in" target="_blank">
+        <img src="https://img.shields.io/badge/Devil%20One-devilone.in-000000?style=for-the-badge" />
+      </a>
+      <br/><br/>
+      <b>Devil One</b> — infrastructure & ecosystem partner.<br/>
+      Driving the DevilChain ecosystem forward.<br/><br/>
+      <a href="https://devilone.in">🌐 devilone.in</a>
+    </td>
+  </tr>
+</table>
+
+<p align="center">
+  <b>Lead Developer:</b> <a href="https://github.com/david0154">David</a> &nbsp;|&nbsp;
+  <a href="https://github.com/david0154">@david0154</a> on GitHub
 </p>
 
 ---
@@ -23,46 +69,47 @@
 
 DevilChain is a **lightweight hybrid AI-powered DAO blockchain** ecosystem designed for:
 
-- ⚡ Web3 applications
-- 📱 Decentralized social media
-- 🤖 AI-assisted blockchain infrastructure
-- 💻 Low-cost validator nodes & VPS mining
-- 🚀 Fast transactions (5,000–20,000 TPS)
-- 🌉 Cross-chain compatibility
-- 🛡️ AI security and moderation
+- ⚡ High-throughput Web3 applications (5,000–20,000 TPS)
+- 📱 Decentralized social media & encrypted messaging
+- 🤖 AI-assisted blockchain infrastructure & security
+- 💻 Low-cost validator nodes & accessible VPS mining
+- 🌉 Seamless cross-chain compatibility (ETH, BNB, Polygon, Solana)
+- 🛡️ DevilGuard AI — real-time fraud, rug pull & spam detection
+- 🪪 DevilID — decentralized Web3 identity (DID:devil)
 
 ---
 
 ## 🌐 Core Ecosystem
 
-| Product | Purpose |
-|---|---|
-| DevilChain Core | Main blockchain network |
-| DevilCoin (DVC) | Native gas/staking coin |
-| DevilX Wallet | Web3 wallet |
-| DevilScan | Blockchain explorer |
-| DevilProtocol | Smart contract system |
-| DevilChain DAO | Governance |
-| DevilSocial | Web3 social media |
-| DevilChat | Encrypted messaging |
-| DevilGuard AI | Security AI |
-| DevilBridge | Cross-chain bridge |
-| DevilStorage | Decentralized storage |
-| DevilID | Decentralized identity |
-| DevilAI Node | AI validator/miner system |
+| Product | Purpose | Status |
+|---|---|---|
+| DevilChain Core | Main Layer-1 blockchain (Rust) | ✅ Active |
+| DevilCoin (DVC/DVL) | Native gas & staking coin | ✅ Active |
+| DevilX Wallet | Multi-platform Web3 wallet | 🔨 Building |
+| DevilScan | Blockchain explorer | ✅ Active |
+| DevilProtocol | Smart contract system (EVM+WASM) | ✅ Active |
+| DevilChain DAO | On-chain governance | ✅ Active |
+| DevilSocial | Decentralized Web3 social media | 🔨 Building |
+| DevilChat | E2E encrypted wallet-to-wallet messaging | 🔨 Building |
+| DevilGuard AI | AI security, fraud & spam detection | ✅ Active |
+| DevilBridge | Cross-chain bridge | 🔨 Building |
+| DevilStorage | Decentralized file storage (CID-based) | ✅ Active |
+| DevilID | Decentralized identity (DID:devil) | ✅ Active |
+| DevilAI Node | AI validator & miner system | ✅ Active |
 
 ---
 
-## 🏗️ Blockchain Core Architecture
+## 🏗️ Architecture
 
-**Type:** Hybrid Layer-1 Blockchain  
+**Type:** Hybrid Layer-1 Blockchain
 **Consensus:** Devil Hybrid Protocol (DHP)
 
-Includes:
-- ✅ Proof of Stake
-- ✅ Lightweight Proof of Work
-- ✅ DAO Governance
-- ✅ AI Optimization
+| Layer | Component |
+|---|---|
+| Security | Proof of Stake (primary) |
+| Anti-Spam | Micro Proof of Work |
+| Governance | DAO Voting |
+| Optimization | AI Scoring & Auto-healing |
 
 ### Consensus Flow
 
@@ -71,15 +118,15 @@ User Transaction
        ↓
 Mempool Validation
        ↓
-AI Risk Scan
+DevilGuard AI Risk Scan
        ↓
-Validator Selection
+Validator Selection (PoS)
        ↓
-Micro PoW Check
+Micro PoW Puzzle Check
        ↓
-Block Creation
+Block Creation + Merkle Root
        ↓
-DAO Verification
+DAO Verification Signature
        ↓
 Final Block Confirmation
 ```
@@ -91,260 +138,106 @@ Final Block Confirmation
 | Layer | Technology |
 |---|---|
 | Core Language | Rust |
-| Secondary Services | Golang |
+| Secondary Services | Python, Golang |
 | Smart Contracts | Solidity + WASM |
 | VM Engine | Modified EVM |
 | Database | RocksDB |
 | Networking | libp2p |
-| APIs | REST + GraphQL |
-| Wallet SDK | Rust |
-| Explorer Backend | Rust + Node.js |
-| Frontend | Next.js |
-| Mobile | Flutter |
-| AI Runtime | ONNX Runtime |
-| AI Models | TinyML |
+| APIs | REST (port 8545) + GraphQL (port 8546) |
+| AI Runtime | ONNX Runtime / TinyML |
+| Explorer | Next.js 14 + Tailwind CSS |
+| Mobile | Flutter 3 |
+| Storage | CID-based (IPFS-compatible) |
 
 ---
 
-## 🖥️ Node System
+## 🖥️ Node Types
 
-### Node Types
-
-| Node | Purpose |
-|---|---|
-| Lite Node | Small VPS |
-| Validator Node | Staking validation |
-| AI Node | AI moderation/security |
-| Archive Node | Full blockchain history |
-| Storage Node | File storage |
-
-### Lite Node Requirements
-
-| Resource | Requirement |
-|---|---|
-| CPU | 2 Core |
-| RAM | 2GB |
-| Storage | 25GB SSD |
-| OS | Ubuntu 22 |
-| Internet | Stable |
-
-### Validator Node Requirements
-
-| Resource | Requirement |
-|---|---|
-| CPU | 4 Core |
-| RAM | 8GB |
-| Storage | 100GB SSD |
-| Stake | Minimum DVC |
+| Node Type | Min CPU | Min RAM | Min Disk | Min Stake | Port |
+|---|---|---|---|---|---|
+| Lite Node | 2 Core | 2 GB | 25 GB SSD | None | 30303 |
+| Validator Node | 4 Core | 8 GB | 100 GB SSD | 100 DVC | 30303 |
+| AI Node | 4 Core | 8 GB | 100 GB SSD | 100 DVC | 8547 |
+| Archive Node | 8 Core | 16 GB | 1 TB SSD | None | 30303 |
+| Storage Node | 2 Core | 4 GB | 500 GB HDD | None | 8548 |
 
 ---
 
-## ⛏️ Mining System
+## ⛏️ Mining
 
-**Engine:** DevilMine  
-**Algorithm:** `DVLHash-AI`
+**Engine:** DevilMine &nbsp;|&nbsp; **Algorithm:** `DVLHash-AI`
 
-- CPU optimized
-- Anti-ASIC
-- Anti-GPU domination
-- Dynamic difficulty
-- AI-assisted optimization
+- ✅ CPU-optimized & accessible
+- ✅ Anti-ASIC & Anti-GPU domination
+- ✅ Dynamic difficulty adjustment
+- ✅ AI-assisted optimization (+bonus DVC per block)
+- ✅ Block Reward: **50 DVC** per block + AI bonus
 
 ---
 
-## 📦 Block Structure
+## 💰 Tokenomics — DevilCoin (DVC/DVL)
 
-```json
-{
-  "block_height": 10001,
-  "timestamp": 177000000,
-  "previous_hash": "0x0000",
-  "validator": "db1x82...",
-  "transactions": [],
-  "merkle_root": "0xabc",
-  "nonce": 1001,
-  "ai_score": 0.98,
-  "dao_signature": "0x999",
-  "block_hash": "0x123"
-}
+| Allocation | % | Amount | Wallet |
+|---|---|---|---|
+| Mining Rewards | 35% | 350,000,000 DVC | `db1xmining_pool` |
+| Ecosystem Growth | 20% | 200,000,000 DVC | `db1xecosystem` |
+| DAO Treasury | 15% | 150,000,000 DVC | `db1xdao_treasury` |
+| Team & Development | 10% | 100,000,000 DVC | `db1xteam` |
+| Validators | 10% | 100,000,000 DVC | `db1xvalidator_pool` |
+| Investors | 5% | 50,000,000 DVC | `db1xinvestors` |
+| Community Rewards | 5% | 50,000,000 DVC | `db1xcommunity` |
+
+**Total Supply:** 1,000,000,000 DVC &nbsp;|&nbsp; **Decimals:** 18 &nbsp;|&nbsp; **Symbol:** DVC / DVL
+
+---
+
+## 🎯 Network Performance
+
+| Metric | Target |
+|---|---|
+| TPS | 5,000 – 20,000 |
+| Block Time | 2 – 5 seconds |
+| Finality | < 10 seconds |
+| Gas Fee | < 0.01 DVC |
+| Energy Usage | Very Low (PoS dominant) |
+
+---
+
+## 🚀 Quick Start
+
+### Docker (Recommended)
+```bash
+git clone https://github.com/david0154/DevilChain.git
+cd DevilChain
+bash docker/start.sh all
 ```
 
-## 💸 Transaction Structure
+### Service Map after start:
+| Service | URL |
+|---|---|
+| DevilChain Node REST | http://localhost:8545 |
+| GraphQL API | http://localhost:8546/graphql |
+| DevilGuard AI | http://localhost:8547 |
+| DevilStorage | http://localhost:8548 |
+| DevilScan Explorer | http://localhost:3000 |
+| DVC Coin Page | http://localhost:3000/coin |
 
-```json
-{
-  "tx_hash": "0x123",
-  "from": "db1abc",
-  "to": "db1xyz",
-  "amount": 100,
-  "gas_fee": 0.01,
-  "timestamp": 1777777,
-  "signature": "ed25519_signature"
-}
+### Run Tests
+```bash
+bash docker/start.sh test
+# or quick shell test:
+bash docker/quick_test.sh
 ```
 
-**Address Format:** `db1x8fh3ks92...`
-
----
-
-## 💰 Tokenomics
-
-| Allocation | Percentage |
-|---|---|
-| Mining Rewards | 35% |
-| Ecosystem Growth | 20% |
-| DAO Treasury | 15% |
-| Team & Development | 10% |
-| Validators | 10% |
-| Investors | 5% |
-| Community Rewards | 5% |
-
----
-
-## 🎯 Network Targets
-
-| Feature | Target |
-|---|---|
-| TPS | 5,000–20,000 |
-| Block Time | 2–5 sec |
-| Finality | Under 10 sec |
-| Energy Usage | Very Low |
-| AI Compression | Enabled |
-
----
-
-## 👛 Wallet: DevilX
-
-**Platforms:** Android, iOS, Windows, Linux, macOS, Browser Extension
-
-**Features:** DVC storage, NFT support, DAO voting, Staking, Multi-chain, Web3 login, Encrypted chat
-
-| Security | Technology |
-|---|---|
-| Wallet Encryption | AES-256 |
-| Signatures | Ed25519 |
-| Key Exchange | Curve25519 |
-| Recovery | Mnemonic Phrase |
-
----
-
-## 📜 Smart Contracts: DevilProtocol
-
-- EVM compatibility
-- Solidity + WASM support
-- AI smart contract scanner
-- Low gas fees
-
-### Deployment Flow
-
-```
-Deploy Contract
-      ↓
-AI Security Scan
-      ↓
-Validator Verification
-      ↓
-DAO Registry Approval
-      ↓
-Live Deployment
+### Generate Test Wallets
+```bash
+python docker/tests/generate_wallets.py --count 3 --export
 ```
 
----
-
-## 🗳️ DAO Governance
-
-**Controls:** Network upgrades, Treasury management, Validator approval, Proposal voting, Ecosystem grants
-
+### Generate & Check Coins
+```bash
+python docker/tests/generate_coin.py --mint --export
 ```
-Voting Power = Stake Amount + Reputation Score + Validator Score
-```
-
----
-
-## 🤖 DevilAI Core
-
-| AI Layer | Technology |
-|---|---|
-| Runtime | ONNX |
-| Lightweight AI | TinyML |
-| AI Backend | Python |
-| AI Core | Rust |
-| NLP Moderation | Custom NLP |
-| Fraud Detection | Graph AI |
-
-**DevilGuard AI Features:** Rug pull detection, Scam token detection, Bot filtering, Spam filtering, Fake wallet analysis, Transaction anomaly detection
-
----
-
-## 🔌 API Architecture
-
-### REST API
-
-```http
-GET  /api/block/latest
-GET  /api/tx/{hash}
-GET  /api/wallet/{address}
-POST /api/send
-POST /api/stake
-```
-
-### GraphQL
-
-```graphql
-query {
-  latestBlock {
-    height
-    hash
-    transactions
-  }
-}
-```
-
----
-
-## 📦 SDK
-
-| Platform | SDK |
-|---|---|
-| Web | JavaScript SDK |
-| Android | Kotlin SDK |
-| iOS | Swift SDK |
-| Backend | Rust SDK |
-| AI | Python SDK |
-
----
-
-## 🗄️ Database
-
-| Component | Database |
-|---|---|
-| Blockchain | RocksDB |
-| Explorer Cache | Redis |
-| User Profiles | PostgreSQL |
-| AI Logs | MongoDB |
-
----
-
-## 🛡️ Network Security
-
-- DDoS protection
-- AI attack detection
-- Validator reputation system
-- Anti-sybil protection
-- DAO security voting
-- AI anomaly monitoring
-
----
-
-## 🗺️ Development Phases
-
-| Phase | Focus |
-|---|---|
-| Phase 1 | Blockchain core, Wallet, Explorer, DAO, Testnet |
-| Phase 2 | Smart contracts, Staking, NFT support, Validator system |
-| Phase 3 | AI systems, DevilGuard AI, AI moderation, AI validator optimization |
-| Phase 4 | DevilSocial, DevilChat, Creator economy, Web3 identity |
-| Phase 5 | Cross-chain bridge, Decentralized cloud, AI validator marketplace, DevilOS |
 
 ---
 
@@ -352,58 +245,125 @@ query {
 
 ```
 DevilChain/
-├── core/              # Rust blockchain core
-├── wallet/            # DevilX Wallet
-├── explorer/          # DevilScan explorer
-├── contracts/         # Smart contracts (Solidity + WASM)
-├── ai/                # DevilAI + DevilGuard
-├── dao/               # DAO governance
-├── social/            # DevilSocial + DevilChat
-├── bridge/            # DevilBridge cross-chain
+├── core/              # Rust blockchain core (validator, mining, RocksDB, GraphQL)
+├── wallet/            # DevilX Wallet (Flutter)
+├── explorer/          # DevilScan Explorer (Next.js 14)
+├── contracts/         # Smart contracts (Solidity — DVC, Staking, DAO, Bridge, Storage, ID)
+├── ai/                # DevilGuard AI + DevilAI Node (Python FastAPI)
+├── storage/           # DevilStorage Node (Rust)
+├── identity/          # DevilID (DID:devil, Rust)
+├── social/            # DevilSocial (Next.js)
+├── chat/              # DevilChat (Next.js)
+├── bridge/            # DevilBridge cross-chain relayer (Rust)
 ├── sdk/               # SDKs (JS, Kotlin, Swift, Rust, Python)
-├── docs/              # Documentation
-├── scripts/           # Deployment & utility scripts
+├── docker/            # Docker Compose, Dockerfiles, test suite
+│   ├── docker-compose.yml
+│   ├── start.sh
+│   ├── quick_test.sh
+│   └── tests/         # pytest suite + wallet/coin generators
+├── docs/              # SETUP.md, WHITEPAPER.md
+├── scripts/           # testnet_genesis.sh, deployment scripts
 └── README.md
 ```
 
 ---
 
-## 👥 Recommended Team
+## 🔌 API Reference
 
-| Role | Count |
-|---|---|
-| Rust Blockchain Engineers | 4 |
-| Golang Engineers | 2 |
-| Flutter Developers | 2 |
-| React/Next.js Developers | 2 |
-| AI Engineers | 3 |
-| DevOps Engineers | 2 |
-| Security Researchers | 2 |
-| UI/UX Designers | 2 |
+### REST API (port 8545)
+```http
+GET  /api/status
+GET  /api/block/latest
+GET  /api/block/{height}
+GET  /api/tx/{hash}
+GET  /api/wallet/{address}
+GET  /api/validators
+GET  /api/dao/proposals
+GET  /api/coin
+POST /api/send
+POST /api/stake
+POST /api/unstake
+POST /api/vote
+POST /api/faucet
+```
+
+### GraphQL (port 8546)
+```graphql
+query {
+  latestBlock { height hash txCount aiScore }
+  status { network coin symbol latestHeight }
+  validators { address stakedDvc reputationScore active }
+}
+```
+
+### DevilGuard AI (port 8547)
+```http
+GET  /health
+POST /scan/tx
+POST /scan/contract
+POST /moderate
+POST /detect/fake-node
+POST /blacklist
+```
 
 ---
 
-## 🔢 Build Order
+## 🗳️ DAO Governance
 
-1. Blockchain Core
-2. Wallet
-3. Explorer
-4. Consensus
-5. Validator System
-6. Smart Contracts
-7. DAO
-8. AI Security
-9. Web3 Social
-10. Cross-chain
+```
+Voting Power = Stake Amount + Reputation Score + Validator Score
+```
+
+DAO controls: network upgrades, treasury spends, validator whitelisting, ecosystem grants, security proposals.
+
+---
+
+## 🗺️ Roadmap
+
+| Phase | Deliverables | Status |
+|---|---|---|
+| Phase 1 | Blockchain core, Wallet, Explorer, DAO, Testnet | ✅ Complete |
+| Phase 2 | Smart contracts, Staking, NFT support, Validators | ✅ Complete |
+| Phase 3 | DevilGuard AI, AI Node, AI moderation | ✅ Complete |
+| Phase 4 | DevilSocial, DevilChat, DevilID, DevilStorage | ✅ Complete |
+| Phase 5 | DevilBridge, Mainnet launch, DevilOS | 🔨 In Progress |
+
+---
+
+## 🛡️ Security
+
+- **Wallet Encryption:** AES-256-GCM
+- **Signatures:** Ed25519
+- **Key Exchange:** Curve25519
+- **Recovery:** BIP39 Mnemonic
+- **AI Security:** DevilGuard AI scans all TXs, contracts, and nodes
+- **Anti-Sybil:** Stake-based identity + DAO approval
+- **DDoS Protection:** Rate limiting + AI anomaly detection
 
 ---
 
 ## 📄 License
 
-This project is licensed under the **MIT License** — see the [LICENSE](LICENSE) file for details.
+Copyright © 2026 **Nexuzy Lab** &amp; **Devil One**. All rights reserved.
+
+This project is licensed under the **MIT License** — see the [LICENSE](LICENSE) file for full details.
+
+Free to use, modify, and distribute with attribution.
 
 ---
 
 <p align="center">
-  Built with ❤️ by the <b>DevilChain Network</b> team | <a href="https://github.com/david0154">@david0154</a>
+  <b>Built with ❤️ by</b> <a href="https://nexuzy.tech" target="_blank"><b>Nexuzy Lab</b></a>
+  &nbsp;|&nbsp;
+  <b>Powered by</b> <a href="https://devilone.in" target="_blank"><b>Devil One</b></a>
+  &nbsp;|&nbsp;
+  Lead Dev: <a href="https://github.com/david0154"><b>David @david0154</b></a>
+</p>
+
+<p align="center">
+  <a href="https://nexuzy.tech">🌐 nexuzy.tech</a>
+  &nbsp;&nbsp;•&nbsp;&nbsp;
+  <a href="https://devilone.in">🌐 devilone.in</a>
+  &nbsp;&nbsp;•&nbsp;&nbsp;
+  <a href="https://github.com/david0154/DevilChain">⭐ Star on GitHub</a>
 </p>
