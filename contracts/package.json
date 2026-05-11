@@ -1,0 +1,14 @@
+{
+  "name": "devilchain-contracts",
+  "version": "0.1.0",
+  "description": "DevilChain Network Smart Contracts",
+  "scripts": {
+    "compile": "hardhat compile",
+    "test": "hardhat test",
+    "deploy": "hardhat run scripts/deploy.js --network devilchain_testnet"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^4.0.0",
+    "hardhat": "^2.22.0"
+  }
+}
