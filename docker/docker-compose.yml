@@ -1,20 +1,88 @@
 version: '3.9'
 
+# DevilChain Network - Complete Docker Testing Stack
+# Covers: Blockchain Node, Explorer, Mining, AI Scan, Fees, Storage, Bridge, Social, Chat
+# Run: cd docker && docker compose up -d
+
 services:
+
+  # ============================================================
+  # 1. DEVILCHAIN CORE NODE (Blockchain + REST + GraphQL)
+  # ============================================================
   devilchain-node:
     build:
       context: ..
       dockerfile: docker/Dockerfile.core
     container_name: devilchain_node
+    hostname: devilchain-node
     ports:
-      - "8545:8545"
-      - "30303:30303"
+      - "8545:8545"   # REST API
+      - "8546:8546"   # GraphQL API
+      - "30303:30303" # P2P
     environment:
       - RUST_LOG=info
+      - DB_PATH=/data/devilchain
+      - NODE_MODE=validator
     volumes:
-      - devilchain_data:/data
+      - devilchain_data:/data/devilchain
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8545/api/status"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     restart: unless-stopped
+    networks:
+      - devilnet
 
+  # ============================================================
+  # 2. DEVILGUARD AI (Port 8547) - TX Scan, Contract Scan, NLP
+  # ============================================================
+  devilguard-ai:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.ai
+    container_name: devilguard_ai
+    ports:
+      - "8547:8547"
+    environment:
+      - AI_THRESHOLD=0.75
+      - NODE_API=http://devilchain-node:8545
+    depends_on:
+      devilchain-node:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8547/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - devilnet
+
+  # ============================================================
+  # 3. DEVILSTORAGE NODE (Port 8548)
+  # ============================================================
+  devilstorage:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.storage
+    container_name: devilstorage
+    ports:
+      - "8548:8548"
+    volumes:
+      - storage_data:/data/devil-storage
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8548/stats"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - devilnet
+
+  # ============================================================
+  # 4. DEVILSCAN EXPLORER (Port 3000)
+  # ============================================================
   devilscan:
     build:
       context: ..
@@ -25,16 +93,126 @@ services:
     environment:
       - NEXT_PUBLIC_API_URL=http://devilchain-node:8545
     depends_on:
-      - devilchain-node
+      devilchain-node:
+        condition: service_healthy
     restart: unless-stopped
+    networks:
+      - devilnet
 
+  # ============================================================
+  # 5. DEVILSOCIAL (Port 3001)
+  # ============================================================
+  devilsocial:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.social
+    container_name: devilsocial
+    ports:
+      - "3001:3001"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://devilchain-node:8545
+    depends_on:
+      devilchain-node:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - devilnet
+
+  # ============================================================
+  # 6. DEVILCHAT (Port 3002)
+  # ============================================================
+  devilchat:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.chat
+    container_name: devilchat
+    ports:
+      - "3002:3002"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://devilchain-node:8545
+    restart: unless-stopped
+    networks:
+      - devilnet
+
+  # ============================================================
+  # 7. DEVILMINE - Mining Worker (DVLHash-AI)
+  # ============================================================
+  devilmine:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.core
+    container_name: devilmine
+    command: devilchain-node mine --wallet db1xminer_test_001 --threads 4
+    environment:
+      - RUST_LOG=info
+    depends_on:
+      devilchain-node:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - devilnet
+
+  # ============================================================
+  # 8. DEVILBRIDGE Relayer (Rust)
+  # ============================================================
+  devilbridge:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.bridge
+    container_name: devilbridge
+    ports:
+      - "8549:8549"
+    environment:
+      - NODE_API=http://devilchain-node:8545
+    depends_on:
+      devilchain-node:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - devilnet
+
+  # ============================================================
+  # 9. TEST RUNNER - Automated test suite for all APIs
+  # ============================================================
+  devil-tester:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.tester
+    container_name: devil_tester
+    environment:
+      - NODE_API=http://devilchain-node:8545
+      - GRAPHQL_API=http://devilchain-node:8546
+      - AI_API=http://devilguard-ai:8547
+      - STORAGE_API=http://devilstorage:8548
+      - BRIDGE_API=http://devilbridge:8549
+    depends_on:
+      devilchain-node:
+        condition: service_healthy
+      devilguard-ai:
+        condition: service_healthy
+    profiles:
+      - test
+    networks:
+      - devilnet
+
+  # ============================================================
+  # 10. REDIS (Cache layer)
+  # ============================================================
   redis:
     image: redis:7-alpine
     container_name: devilchain_redis
     ports:
       - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
     restart: unless-stopped
+    networks:
+      - devilnet
 
+  # ============================================================
+  # 11. POSTGRESQL (Profiles / Explorer data)
+  # ============================================================
   postgres:
     image: postgres:16-alpine
     container_name: devilchain_postgres
@@ -46,18 +224,34 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./sql/init.sql:/docker-entrypoint-initdb.d/init.sql
     restart: unless-stopped
+    networks:
+      - devilnet
 
+  # ============================================================
+  # 12. MONGODB (AI logs / social data)
+  # ============================================================
   mongodb:
     image: mongo:7
     container_name: devilchain_mongo
     ports:
       - "27017:27017"
+    environment:
+      MONGO_INITDB_DATABASE: devilchain
     volumes:
       - mongo_data:/data/db
     restart: unless-stopped
+    networks:
+      - devilnet
 
 volumes:
   devilchain_data:
+  storage_data:
+  redis_data:
   postgres_data:
   mongo_data:
+
+networks:
+  devilnet:
+    driver: bridge
