@@ -85,14 +85,14 @@ DevilChain is a **lightweight hybrid AI-powered DAO blockchain** ecosystem desig
 |---|---|---|
 | DevilChain Core | Main Layer-1 blockchain (Rust) | ✅ Active |
 | DevilCoin (DVC/DVL) | Native gas & staking coin | ✅ Active |
-| DevilX Wallet | Multi-platform Web3 wallet | 🔨 Building |
-| DevilScan | Blockchain explorer | ✅ Active |
+| DevilX Wallet | Multi-platform Web3 wallet (Flutter) | ✅ Active |
+| DevilScan | Blockchain explorer (Next.js) | ✅ Active |
 | DevilProtocol | Smart contract system (EVM+WASM) | ✅ Active |
 | DevilChain DAO | On-chain governance | ✅ Active |
-| DevilSocial | Decentralized Web3 social media | 🔨 Building |
-| DevilChat | E2E encrypted wallet-to-wallet messaging | 🔨 Building |
+| DevilSocial | Decentralized Web3 social media (Next.js) | ✅ Active |
+| DevilChat | E2E encrypted wallet-to-wallet messaging | ✅ Active |
 | DevilGuard AI | AI security, fraud & spam detection | ✅ Active |
-| DevilBridge | Cross-chain bridge | 🔨 Building |
+| DevilBridge | Cross-chain bridge (ETH/BSC/Polygon/SOL) | ✅ Active |
 | DevilStorage | Decentralized file storage (CID-based) | ✅ Active |
 | DevilID | Decentralized identity (DID:devil) | ✅ Active |
 | DevilAI Node | AI validator & miner system | ✅ Active |
@@ -146,7 +146,9 @@ Final Block Confirmation
 | APIs | REST (port 8545) + GraphQL (port 8546) |
 | AI Runtime | ONNX Runtime / TinyML |
 | Explorer | Next.js 14 + Tailwind CSS |
-| Mobile | Flutter 3 |
+| Mobile Wallet | Flutter 3 |
+| Social / Chat | Next.js 14 |
+| Bridge Relayer | Python FastAPI |
 | Storage | CID-based (IPFS-compatible) |
 
 ---
@@ -219,13 +221,14 @@ bash docker/start.sh all
 | GraphQL API | http://localhost:8546/graphql |
 | DevilGuard AI | http://localhost:8547 |
 | DevilStorage | http://localhost:8548 |
+| DevilBridge | http://localhost:8549 |
 | DevilScan Explorer | http://localhost:3000 |
-| DVC Coin Page | http://localhost:3000/coin |
+| DevilSocial | http://localhost:3001 |
+| DevilChat | http://localhost:3002 |
 
 ### Run Tests
 ```bash
 bash docker/start.sh test
-# or quick shell test:
 bash docker/quick_test.sh
 ```
 
@@ -245,24 +248,19 @@ python docker/tests/generate_coin.py --mint --export
 
 ```
 DevilChain/
-├── core/              # Rust blockchain core (validator, mining, RocksDB, GraphQL)
+├── core/              # Rust blockchain core
 ├── wallet/            # DevilX Wallet (Flutter)
 ├── explorer/          # DevilScan Explorer (Next.js 14)
-├── contracts/         # Smart contracts (Solidity — DVC, Staking, DAO, Bridge, Storage, ID)
-├── ai/                # DevilGuard AI + DevilAI Node (Python FastAPI)
+├── contracts/         # Smart contracts (Solidity)
+├── ai/                # DevilGuard AI (Python FastAPI)
 ├── storage/           # DevilStorage Node (Rust)
-├── identity/          # DevilID (DID:devil, Rust)
-├── social/            # DevilSocial (Next.js)
-├── chat/              # DevilChat (Next.js)
-├── bridge/            # DevilBridge cross-chain relayer (Rust)
+├── identity/          # DevilID (DID:devil)
+├── social/            # DevilSocial (Next.js 14)
+├── chat/              # DevilChat (Next.js 14)
+├── bridge/            # DevilBridge (Python FastAPI)
 ├── sdk/               # SDKs (JS, Kotlin, Swift, Rust, Python)
-├── docker/            # Docker Compose, Dockerfiles, test suite
-│   ├── docker-compose.yml
-│   ├── start.sh
-│   ├── quick_test.sh
-│   └── tests/         # pytest suite + wallet/coin generators
-├── docs/              # SETUP.md, WHITEPAPER.md
-├── scripts/           # testnet_genesis.sh, deployment scripts
+├── docker/            # Docker Compose + test suite
+├── docs/              # API.md, TESTING.md, DOCKER.md
 └── README.md
 ```
 
@@ -287,23 +285,15 @@ POST /api/vote
 POST /api/faucet
 ```
 
-### GraphQL (port 8546)
-```graphql
-query {
-  latestBlock { height hash txCount aiScore }
-  status { network coin symbol latestHeight }
-  validators { address stakedDvc reputationScore active }
-}
-```
-
-### DevilGuard AI (port 8547)
+### Bridge API (port 8549)
 ```http
 GET  /health
-POST /scan/tx
-POST /scan/contract
-POST /moderate
-POST /detect/fake-node
-POST /blacklist
+GET  /chains
+POST /bridge/initiate
+POST /bridge/lock
+GET  /bridge/status/{bridge_id}
+GET  /bridge/history/{address}
+GET  /stats
 ```
 
 ---
@@ -313,8 +303,6 @@ POST /blacklist
 ```
 Voting Power = Stake Amount + Reputation Score + Validator Score
 ```
-
-DAO controls: network upgrades, treasury spends, validator whitelisting, ecosystem grants, security proposals.
 
 ---
 
@@ -326,7 +314,7 @@ DAO controls: network upgrades, treasury spends, validator whitelisting, ecosyst
 | Phase 2 | Smart contracts, Staking, NFT support, Validators | ✅ Complete |
 | Phase 3 | DevilGuard AI, AI Node, AI moderation | ✅ Complete |
 | Phase 4 | DevilSocial, DevilChat, DevilID, DevilStorage | ✅ Complete |
-| Phase 5 | DevilBridge, Mainnet launch, DevilOS | 🔨 In Progress |
+| Phase 5 | DevilBridge, Mainnet launch, DevilOS | ✅ Complete |
 
 ---
 
@@ -347,8 +335,6 @@ DAO controls: network upgrades, treasury spends, validator whitelisting, ecosyst
 Copyright © 2026 **Nexuzy Lab** &amp; **Devil One**. All rights reserved.
 
 This project is licensed under the **MIT License** — see the [LICENSE](LICENSE) file for full details.
-
-Free to use, modify, and distribute with attribution.
 
 ---
 

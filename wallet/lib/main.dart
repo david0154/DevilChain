@@ -1,52 +1,44 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter/services.dart';
 import 'screens/home_screen.dart';
 import 'screens/send_screen.dart';
-import 'screens/receive_screen.dart';
-import 'screens/staking_screen.dart';
+import 'screens/stake_screen.dart';
 import 'screens/dao_screen.dart';
-import 'screens/settings_screen.dart';
-import 'providers/wallet_provider.dart';
-import 'providers/chain_provider.dart';
+import 'screens/chat_screen.dart';
 
 void main() {
-  runApp(const DevilXApp());
+  WidgetsFlutterBinding.ensureInitialized();
+  SystemChrome.setSystemUIOverlayStyle(
+    const SystemUiOverlayStyle(statusBarColor: Colors.transparent));
+  runApp(const DevilXWalletApp());
 }
 
-class DevilXApp extends StatelessWidget {
-  const DevilXApp({super.key});
-
+class DevilXWalletApp extends StatelessWidget {
+  const DevilXWalletApp({super.key});
   @override
   Widget build(BuildContext context) {
-    return MultiProvider(
-      providers: [
-        ChangeNotifierProvider(create: (_) => WalletProvider()),
-        ChangeNotifierProvider(create: (_) => ChainProvider()),
-      ],
-      child: MaterialApp(
-        title: 'DevilX Wallet',
-        debugShowCheckedModeBanner: false,
-        theme: ThemeData(
-          colorScheme: ColorScheme.dark(
-            primary: const Color(0xFFCC0000),
-            secondary: const Color(0xFFFF3333),
-            surface: const Color(0xFF1A1A1A),
-            background: const Color(0xFF0D0D0D),
-          ),
-          scaffoldBackgroundColor: const Color(0xFF0D0D0D),
-          fontFamily: 'DevilFont',
-          useMaterial3: true,
+    return MaterialApp(
+      title: 'DevilX Wallet',
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData(
+        useMaterial3: true,
+        colorScheme: const ColorScheme.dark(
+          primary: Color(0xFFCC0000),
+          secondary: Color(0xFFFF3333),
+          surface: Color(0xFF151515),
+          background: Color(0xFF0D0D0D),
         ),
-        initialRoute: '/',
-        routes: {
-          '/': (ctx) => const HomeScreen(),
-          '/send': (ctx) => const SendScreen(),
-          '/receive': (ctx) => const ReceiveScreen(),
-          '/staking': (ctx) => const StakingScreen(),
-          '/dao': (ctx) => const DaoScreen(),
-          '/settings': (ctx) => const SettingsScreen(),
-        },
+        scaffoldBackgroundColor: const Color(0xFF0D0D0D),
+        fontFamily: 'Inter',
       ),
+      initialRoute: '/',
+      routes: {
+        '/':      (_) => const HomeScreen(),
+        '/send':  (_) => const SendScreen(),
+        '/stake': (_) => const StakeScreen(),
+        '/dao':   (_) => const DaoScreen(),
+        '/chat':  (_) => const ChatScreen(),
+      },
     );
   }
 }
