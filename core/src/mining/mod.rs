@@ -1,7 +1,7 @@
 //! DevilMine Engine — DVLHash-AI Algorithm
 //! CPU-optimized, Anti-ASIC, Dynamic difficulty
 
-use crate::blockchain::{Block, Transaction, Blockchain, now_timestamp};
+use crate::blockchain::{Block, Blockchain, now_timestamp};
 use crate::consensus::DHPConsensus;
 use std::sync::Arc;
 use tokio::sync::RwLock;
@@ -43,3 +43,4 @@ pub async fn start_mining(
         let mut bc = blockchain.write().await;
         bc.add_block(mined);
     }
+}
