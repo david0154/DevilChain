@@ -1,4 +1,5 @@
-//! DevilChain Consensus — DHP, VRF validator selection, spawn_blocking PoW
+//! DevilChain Consensus — DHP, VRF validator selection
+//! ✅ mine_block() uses tokio::task::spawn_blocking — never blocks async runtime
 //! Developed by Nexuzy Lab (nexuzy.tech) | Powered by Devil One (devilone.in)
 
 use sha2::{Sha256, Digest};
@@ -6,25 +7,26 @@ use std::collections::HashMap;
 use crate::blockchain::{Block, Amount};
 use crate::tokenomics::MINING_POOL_WALLET;
 
-// ── Validator Registry (unified name — was ValidatorSet in old api) ───────────
+// ── Validator ─────────────────────────────────────────────────────────────────
 
 #[derive(Debug, Clone)]
 pub struct Validator {
     pub address:         String,
-    pub stake:           u128,   // µDVC ✅ u128
-    pub reputation:      u32,    // 0–100
+    pub stake:           u128,
+    pub reputation:      u32,
     pub blocks_produced: u64,
     pub active:          bool,
 }
 
 impl Validator {
-    /// Integer voting power — no f64, no NaN risk
+    /// Pure integer voting power — no f64, no NaN
     pub fn voting_power(&self) -> u128 {
         self.stake.saturating_mul(self.reputation as u128)
     }
 }
 
-/// Canonical name used by both consensus & api
+// ── ValidatorRegistry ─────────────────────────────────────────────────────────
+
 pub struct ValidatorRegistry {
     validators: HashMap<String, Validator>,
 }
@@ -58,7 +60,7 @@ impl ValidatorRegistry {
             .unwrap_or(false)
     }
 
-    /// VRF-style weighted random — entropy from prev block hash
+    /// VRF-style weighted random using prev block hash as entropy
     pub fn select_validator(&self, entropy: &str) -> Option<String> {
         let eligible: Vec<&Validator> = self.validators.values()
             .filter(|v| v.active && v.stake >= Self::MIN_STAKE).collect();
@@ -67,9 +69,9 @@ impl ValidatorRegistry {
             .map(|v| v.voting_power())
             .fold(0u128, |a, b| a.saturating_add(b));
         if total == 0 { return None; }
-        let seed = Sha256::digest(entropy.as_bytes());
-        let pick_seed = u128::from_be_bytes(seed[..16].try_into().unwrap_or([0;16]));
-        let mut pick = pick_seed % total;
+        let seed  = Sha256::digest(entropy.as_bytes());
+        let pick_seed = u128::from_be_bytes(seed[..16].try_into().unwrap_or([0u8;16]));
+        let mut pick  = pick_seed % total;
         for v in &eligible {
             let vp = v.voting_power();
             if pick < vp { return Some(v.address.clone()); }
@@ -89,7 +91,7 @@ impl ValidatorRegistry {
     pub fn get(&self, addr: &str) -> Option<&Validator> { self.validators.get(addr) }
 }
 
-// ── DHP Consensus ─────────────────────────────────────────────────────────────
+// ── DHPConsensus ──────────────────────────────────────────────────────────────
 
 pub struct DHPConsensus {
     pub difficulty:        u32,
@@ -100,9 +102,9 @@ pub struct DHPConsensus {
 impl Default for DHPConsensus {
     fn default() -> Self {
         Self {
-            difficulty: 4,
+            difficulty:        4,
             target_block_time: 3,
-            validators: ValidatorRegistry::default(),
+            validators:        ValidatorRegistry::default(),
         }
     }
 }
@@ -117,11 +119,12 @@ impl DHPConsensus {
             && !block.dao_signature.is_empty()
     }
 
-    /// ✅ spawn_blocking — PoW never freezes async runtime
+    /// ✅ spawn_blocking: PoW loop runs on a dedicated OS thread,
+    ///    never starves the Tokio async runtime.
     pub async fn mine_block(&self, mut block: Block) -> Block {
         let diff = self.difficulty;
         tokio::task::spawn_blocking(move || {
-            let prefix = "0".repeat(diff as usize);
+            let prefix = "0".repeat((diff / 4) as usize);
             loop {
                 block.block_hash = block.compute_hash();
                 if block.block_hash.starts_with(&prefix) { return block; }
@@ -129,7 +132,7 @@ impl DHPConsensus {
             }
         })
         .await
-        .expect("mining thread panicked")
+        .expect("Mining thread panicked")
     }
 
     pub fn adjust_difficulty(&mut self, avg_block_time: u64) {
